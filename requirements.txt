@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+bcrypt
+pyjwt
+yfinance
+pandas
+numpy
+langgraph
+langchain
+langchain-openai
+tavily-python
+python-dotenv
+quantstats
+matplotlib
