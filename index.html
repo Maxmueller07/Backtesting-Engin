@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtesting Engine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f4f0;
+  --white: #ffffff;
+  --black: #0d0d0d;
+  --gray1: #1a1a1a;
+  --gray2: #333333;
+  --gray3: #666666;
+  --gray4: #999999;
+  --gray5: #cccccc;
+  --gray6: #e8e8e8;
+  --gray7: #f0f0ee;
+  --border: #d4d4d0;
+  --green: #1a6644;
+  --red: #8b1a1a;
+  --gold: #8b6914;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', serif;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--black); font-family: var(--sans); min-height: 100vh; }
+
+header {
+  background: var(--black); color: white;
+  padding: 0 2rem; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: var(--serif); font-size: 1.1rem; }
+.logo-sub { font-family: var(--mono); font-size: 0.6rem; color: #888; letter-spacing: 0.2em; margin-top: 1px; }
+.api-status { font-family: var(--mono); font-size: 0.65rem; color: #888; display: flex; align-items: center; gap: 6px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+
+.layout { display: grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 56px); }
+
+.sidebar {
+  background: var(--white); border-right: 1px solid var(--border);
+  overflow-y: auto; position: sticky; top: 56px; height: calc(100vh - 56px);
+}
+
+.accordion-item { border-bottom: 1px solid var(--border); }
+.accordion-header {
+  width: 100%; background: none; border: none;
+  padding: 1rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; font-family: var(--mono); font-size: 0.68rem;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray2);
+  transition: background 0.15s;
+}
+.accordion-header:hover { background: var(--gray7); }
+.accordion-header.open { background: var(--gray7); color: var(--black); }
+.accordion-arrow { font-size: 0.6rem; transition: transform 0.2s; }
+.accordion-header.open .accordion-arrow { transform: rotate(180deg); }
+.accordion-body { display: none; padding: 1rem 1.5rem 1.5rem; }
+.accordion-body.open { display: block; }
+
+.field { margin-bottom: 0.8rem; }
+.field:last-child { margin-bottom: 0; }
+label { display: block; font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray3); margin-bottom: 0.3rem; }
+
+input[type="text"], input[type="number"], input[type="date"], select {
+  width: 100%; background: var(--white); border: 1px solid var(--border);
+  color: var(--black); padding: 0.48rem 0.7rem; border-radius: 3px;
+  font-family: var(--mono); font-size: 0.8rem; outline: none; transition: border-color 0.15s;
+  -webkit-appearance: none; appearance: none;
+}
+input:focus, select:focus { border-color: var(--black); }
+.select-wrap { position: relative; }
+.select-wrap::after { content: '▾'; position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 0.7rem; color: var(--gray3); }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+
+.asset-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-bottom: 0.75rem; }
+.asset-table th { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray3); padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); text-align: left; font-weight: 400; }
+.asset-table td { padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--gray6); vertical-align: middle; }
+.asset-table tr:last-child td { border-bottom: none; }
+
+.symbol-badge { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; background: var(--gray7); border: 1px solid var(--border); padding: 2px 5px; border-radius: 2px; }
+.remove-btn { background: none; border: none; color: var(--gray4); cursor: pointer; font-size: 1rem; padding: 2px 4px; border-radius: 2px; transition: all 0.15s; line-height: 1; }
+.remove-btn:hover { color: var(--red); background: #fff0f0; }
+
+.total-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-top: 1px solid var(--border); }
+.total-label { font-family: var(--mono); font-size: 0.62rem; color: var(--gray3); text-transform: uppercase; letter-spacing: 0.1em; }
+.total-val { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; }
+.total-val.ok { color: var(--green); }
+.total-val.err { color: var(--red); }
+
+.add-form { background: var(--gray7); border: 1px solid var(--border); border-radius: 3px; padding: 0.75rem; margin-top: 0.5rem; }
+
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0; border-bottom: 1px solid var(--gray6); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 0.8rem; color: var(--gray2); }
+.toggle-sub { font-family: var(--mono); font-size: 0.62rem; color: var(--gray4); margin-top: 2px; }
+.switch { width: 38px; height: 22px; background: var(--gray5); border-radius: 11px; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+.switch.on { background: var(--black); }
+.switch::after { content: ''; position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; top: 3px; left: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.switch.on::after { left: 19px; }
+
+.div-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+.div-table th { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray3); padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); text-align: left; font-weight: 400; }
+.div-table td { padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--gray6); }
+.div-table td input { padding: 0.28rem 0.4rem; font-size: 0.72rem; width: 70px; }
+.div-source { font-family: var(--mono); font-size: 0.68rem; color: var(--gray2); font-weight: 500; padding: 0.5rem 0 0.2rem; }
+
+.run-btn { width: 100%; background: var(--black); color: white; border: none; padding: 0.85rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+.run-btn:hover { background: var(--gray1); }
+.run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sidebar-footer { padding: 1.25rem 1.5rem; border-top: 2px solid var(--black); }
+
+.main { padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+.placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 500px; color: var(--gray4); gap: 1rem; }
+.placeholder-title { font-family: var(--serif); font-size: 1.8rem; color: var(--gray5); }
+.placeholder-sub { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.kpi { background: var(--white); padding: 1.25rem 1.25rem; }
+.kpi-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray3); margin-bottom: 0.5rem; }
+.kpi-value { font-family: var(--serif); font-size: 1.5rem; color: var(--black); line-height: 1; }
+.kpi-value.green { color: var(--green); }
+.kpi-value.red { color: var(--red); }
+.kpi-value.gold { color: var(--gold); }
+
+.chart-card { background: var(--white); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.chart-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+.chart-title { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray3); }
+.chart-body { padding: 1.5rem; height: 320px; position: relative; }
+.chart-body-sm { padding: 1.5rem; height: 240px; position: relative; }
+
+.error-box { background: #fff5f5; border: 1px solid #fca5a5; border-radius: 4px; padding: 1rem 1.5rem; font-family: var(--mono); font-size: 0.78rem; color: var(--red); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray5); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Backtesting Engine</div>
+    <div class="logo-sub">Portfolio Simulation System</div>
+  </div>
+  <div class="api-status"><span class="dot"></span>localhost:8000</div>
+</header>
+
+<div class="layout">
+<aside class="sidebar">
+
+  <!-- 01 Zeitraum -->
+  <div class="accordion-item">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>01 — Zeitraum & Kapital</span><span class="accordion-arrow">▾</span>
+    </button>
+    <div class="accordion-body open">
+      <div class="row2">
+        <div class="field"><label>Startdatum</label><input type="date" id="startdatum" value="2014-04-01"></div>
+        <div class="field"><label>Enddatum</label><input type="date" id="enddatum" value="2026-01-01"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Startkapital (€)</label><input type="number" id="startkapital" value="20000"></div>
+        <div class="field"><label>Sparplan Start (€)</label><input type="number" id="sp_start" value="500"></div>
+      </div>
+      <div class="field"><label>Rebalancing Intervall (Tage)</label><input type="number" id="intervall" value="362"></div>
+    </div>
+  </div>
+
+  <!-- 02 Assets -->
+  <div class="accordion-item">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>02 — Portfolio Assets</span><span class="accordion-arrow">▾</span>
+    </button>
+    <div class="accordion-body open">
+      <table class="asset-table">
+        <thead><tr><th>Symbol</th><th>Name</th><th style="text-align:right">Anteil</th><th></th></tr></thead>
+        <tbody id="asset-tbody"></tbody>
+      </table>
+      <div class="total-bar">
+        <span class="total-label">Gesamt</span>
+        <span class="total-val err" id="total-val">0%</span>
+      </div>
+      <div class="add-form">
+        <div class="row3">
+          <div class="field"><label>Symbol</label><input type="text" id="new-sym" placeholder="AAPL" style="text-transform:uppercase"></div>
+          <div class="field"><label>Name</label><input type="text" id="new-name" placeholder="Apple"></div>
+          <div class="field"><label>Anteil %</label><input type="number" id="new-ant" placeholder="10" min="1" max="100"></div>
+        </div>
+        <button class="run-btn" style="padding:0.55rem;font-size:0.68rem;margin-top:0.4rem;" onclick="addAsset()">+ ASSET HINZUFÜGEN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 Regeln -->
+  <div class="accordion-item">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>03 — Handelsregeln</span><span class="accordion-arrow">▾</span>
+    </button>
+    <div class="accordion-body open">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Stop Loss</div><div class="toggle-sub">Verkauf bei −15% vom Peak</div></div>
+        <div class="switch" id="sw-Stop_Loss" onclick="toggleSw(this)"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Rebalancing</div><div class="toggle-sub">Anteile periodisch anpassen</div></div>
+        <div class="switch on" id="sw-rebalancing" onclick="toggleSw(this)"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Thesaurierend</div><div class="toggle-sub">Dividenden reinvestieren</div></div>
+        <div class="switch on" id="sw-Thesaurirend" onclick="toggleSw(this)"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Dividenden Umschichten</div><div class="toggle-sub">Gezielt umleiten</div></div>
+        <div class="switch on" id="sw-dividenden_umschichten" onclick="toggleSw(this,'acc-div')"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Sparplan</div><div class="toggle-sub">Monatlich investieren</div></div>
+        <div class="switch on" id="sw-sparblan" onclick="toggleSw(this)"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Schwellwert-Umschichtung</div><div class="toggle-sub">Bei Zielwert umschichten</div></div>
+        <div class="switch" id="sw-schwellwert" onclick="toggleSw(this,'acc-schwellwert')"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 Schwellwert -->
+  <div class="accordion-item" id="acc-schwellwert" style="display:none;">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>04 — Schwellwert Konfiguration</span><span class="accordion-arrow">▾</span>
+    </button>
+    <div class="accordion-body open">
+      <div class="field"><label>Ab Depotwert (€)</label><input type="number" id="sw-schwelle" value="100000"></div>
+      <div class="row2">
+        <div class="field"><label>Von Asset</label><div class="select-wrap"><select id="sw-von"></select></div></div>
+        <div class="field"><label>Zu Asset</label><div class="select-wrap"><select id="sw-zu"></select></div></div>
+      </div>
+      <div class="field"><label>Umschichten (%)</label><input type="number" id="sw-prozent" value="20" min="1" max="100"></div>
+    </div>
+  </div>
+
+  <!-- 05 Dividenden Ziele -->
+  <div class="accordion-item" id="acc-div">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>05 — Dividenden Ziele</span><span class="accordion-arrow">▾</span>
+    </button>
+    <div class="accordion-body open">
+      <p style="font-family:var(--mono);font-size:0.65rem;color:var(--gray3);margin-bottom:0.75rem;">Leer = thesaurierend. Summe pro Asset muss 100% ergeben.</p>
+      <div id="div-ziel-liste"></div>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="run-btn" id="run-btn" onclick="runSimulation()">▶ SIMULATION STARTEN</button>
+  </div>
+
+</aside>
+
+<main class="main" id="main">
+  <div class="placeholder">
+    <div class="placeholder-title">Portfolio Backtesting</div>
+    <div class="placeholder-sub">Konfigurieren &amp; Simulation starten</div>
+  </div>
+</main>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+let charts = {};
+
+let assets = [
+  { name:"Philip Morris",  symbol:"PM",     anteil:17, regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":20,MDT:10,META:15,GOOGL:15,MA:15,AMZN:15 }}},
+  { name:"Procter Gamble", symbol:"PG",     anteil:17, regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":10,MDT:10,META:25,GOOGL:15,MA:15,AMZN:15 }}},
+  { name:"Coca Cola",      symbol:"KO",     anteil:16, regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":10,MDT:10,META:25,GOOGL:15,MA:15,AMZN:15 }}},
+  { name:"Lockheed",       symbol:"LMT",    anteil:5,  regeln:{}},
+  { name:"Rheinmetall",    symbol:"RHM.DE", anteil:10, regeln:{}},
+  { name:"Medtronic",      symbol:"MDT",    anteil:5,  regeln:{}},
+  { name:"Meta",           symbol:"META",   anteil:8,  regeln:{}},
+  { name:"Google",         symbol:"GOOGL",  anteil:7,  regeln:{}},
+  { name:"Mastercard",     symbol:"MA",     anteil:8,  regeln:{}},
+  { name:"Amazon",         symbol:"AMZN",   anteil:7,  regeln:{}},
+];
+
+function toggleAcc(btn) {
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
+
+function toggleSw(el, accId) {
+  el.classList.toggle('on');
+  if (accId) {
+    document.getElementById(accId).style.display = el.classList.contains('on') ? 'block' : 'none';
+  }
+}
+
+function renderAssets() {
+  const tbody = document.getElementById('asset-tbody');
+  tbody.innerHTML = assets.map((a,i) => `
+    <tr>
+      <td><span class="symbol-badge">${a.symbol}</span></td>
+      <td style="font-size:0.74rem;color:var(--gray2);">${a.name}</td>
+      <td style="font-family:var(--mono);font-size:0.74rem;text-align:right;color:var(--gray2);">${a.anteil}%</td>
+      <td><button class="remove-btn" onclick="removeAsset(${i})">×</button></td>
+    </tr>`).join('');
+
+  const total = assets.reduce((s,a) => s+a.anteil, 0);
+  const el = document.getElementById('total-val');
+  el.textContent = `${total}%`;
+  el.className = `total-val ${total===100?'ok':'err'}`;
+
+  const syms = assets.map(a => a.symbol);
+  ['sw-von','sw-zu'].forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = syms.map(s => `<option ${s===cur?'selected':''}>${s}</option>`).join('');
+  });
+
+  renderDivZiele();
+}
+
+function addAsset() {
+  const sym = document.getElementById('new-sym').value.toUpperCase().trim();
+  const name = document.getElementById('new-name').value.trim() || sym;
+  const ant = parseInt(document.getElementById('new-ant').value);
+  if (!sym || !ant) return;
+  assets.push({ name, symbol: sym, anteil: ant, regeln: {} });
+  document.getElementById('new-sym').value = '';
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-ant').value = '';
+  renderAssets();
+}
+
+function removeAsset(i) { assets.splice(i,1); renderAssets(); }
+
+function renderDivZiele() {
+  const container = document.getElementById('div-ziel-liste');
+  const syms = assets.map(a => a.symbol);
+  container.innerHTML = assets.map((a,i) => {
+    const ziel = a.regeln?.dividenden_ziel || {};
+    const targets = syms.filter(s => s !== a.symbol);
+    return `
+      <div style="margin-bottom:1rem;">
+        <div class="div-source">${a.symbol} — ${a.name}</div>
+        <table class="div-table">
+          <thead><tr><th>Ziel Asset</th><th>Anteil %</th></tr></thead>
+          <tbody>
+            ${targets.map(s => `
+              <tr>
+                <td><span class="symbol-badge">${s}</span></td>
+                <td><input type="number" min="0" max="100" placeholder="0"
+                  value="${ziel[s]||''}"
+                  onchange="updateDivZiel(${i},'${s}',this.value)">
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }).join('');
+}
+
+function updateDivZiel(idx, sym, val) {
+  const v = parseInt(val)||0;
+  if (!assets[idx].regeln) assets[idx].regeln = {};
+  if (!assets[idx].regeln.dividenden_ziel) assets[idx].regeln.dividenden_ziel = {};
+  if (v===0) delete assets[idx].regeln.dividenden_ziel[sym];
+  else assets[idx].regeln.dividenden_ziel[sym] = v;
+  if (Object.keys(assets[idx].regeln.dividenden_ziel).length===0) delete assets[idx].regeln.dividenden_ziel;
+}
+
+function getRegeln() {
+  return ['Stop_Loss','rebalancing','Thesaurirend','dividenden_umschichten','sparblan','schwellwert']
+    .filter(r => document.getElementById(`sw-${r}`)?.classList.contains('on'));
+}
+
+async function runSimulation() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = '⟳ SIMULATION LÄUFT...';
+
+  const total = assets.reduce((s,a) => s+a.anteil, 0);
+  if (total !== 100) { showError(`Anteile ergeben ${total}% — muss 100% sein.`); resetBtn(btn); return; }
+
+  const config = {
+    startkapital: parseFloat(document.getElementById('startkapital').value),
+    startdatum: document.getElementById('startdatum').value,
+    enddatum: document.getElementById('enddatum').value,
+    intervall: parseInt(document.getElementById('intervall').value),
+    sp_start: parseFloat(document.getElementById('sp_start').value),
+    aktive_regeln: getRegeln(),
+    assets: assets.map(a => ({ name:a.name, symbol:a.symbol, anteil:a.anteil, regeln:a.regeln })),
+    schwellwert_config: {
+      schwelle: parseFloat(document.getElementById('sw-schwelle').value),
+      von: document.getElementById('sw-von').value,
+      zu: document.getElementById('sw-zu').value,
+      prozent: parseFloat(document.getElementById('sw-prozent').value),
+    }
+  };
+
+  try {
+    const res = await fetch(`${API}/simuliere`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(config) });
+    if (!res.ok) throw new Error(`API Fehler ${res.status}`);
+    const data = await res.json();
+    if (data.fehler) throw new Error(data.fehler);
+    renderErgebnis(data);
+  } catch(e) { showError(e.message); }
+  resetBtn(btn);
+}
+
+function resetBtn(btn) { btn.disabled=false; btn.textContent='▶ SIMULATION STARTEN'; }
+
+function renderErgebnis(data) {
+  const main = document.getElementById('main');
+  const gPos = data.gewinn >= 0;
+  const labels = Object.keys(data.historie['Gesamtwert']).map(d => d.slice(0,10));
+  const gesamtVals = Object.values(data.historie['Gesamtwert']);
+
+  main.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Depot-Wert</div><div class="kpi-value">${fmt(data.gesamtwert)}€</div></div>
+      <div class="kpi"><div class="kpi-label">Eingezahlt</div><div class="kpi-value">${fmt(data.gesamt_eingezahlt)}€</div></div>
+      <div class="kpi"><div class="kpi-label">Gewinn</div><div class="kpi-value ${gPos?'green':'red'}">${gPos?'+':''}${fmt(data.gewinn)}€</div></div>
+      <div class="kpi"><div class="kpi-label">Gesamtrendite</div><div class="kpi-value ${gPos?'green':'red'}">${gPos?'+':''}${data.gesamt_rendite.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">Ø Jährlich</div><div class="kpi-value green">+${data.jaehrliche_rendite.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value gold">${data.sharpe_ratio.toFixed(2)}</div></div>
+      <div class="kpi"><div class="kpi-label">Volatilität</div><div class="kpi-value">${data.volatilitaet.toFixed(1)}%</div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><span class="chart-title">Gesamtportfolio</span></div>
+      <div class="chart-body"><canvas id="chart-gesamt"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><span class="chart-title">Einzelwerte</span></div>
+      <div class="chart-body-sm"><canvas id="chart-einzel"></canvas></div>
+    </div>`;
+
+  const eingezahlt = new Array(gesamtVals.length).fill(data.gesamt_eingezahlt);
+
+  if (charts.gesamt) charts.gesamt.destroy();
+  charts.gesamt = new Chart(document.getElementById('chart-gesamt'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Portfolio', data:gesamtVals, borderColor:'#1a1a1a', backgroundColor:'rgba(0,0,0,0.04)', fill:true, tension:0.3, pointRadius:0, borderWidth:2 },
+      { label:'Eingezahlt', data:eingezahlt, borderColor:'#999', borderDash:[5,4], fill:false, pointRadius:0, borderWidth:1.2 }
+    ]},
+    options: mkOpts()
+  });
+
+  const colors = ['#1a6644','#8b1a1a','#8b6914','#1a3a6b','#4a1a6b','#1a5a6b','#6b4a1a','#1a6b4a','#6b1a4a','#3a6b1a'];
+  const einzel_ds = assets.map((a,i) => ({
+    label: a.symbol,
+    data: Object.values(data.historie[`${a.symbol}_wert`]||{}),
+    borderColor: colors[i%colors.length],
+    fill:false, tension:0.3, pointRadius:0, borderWidth:1.5
+  }));
+
+  if (charts.einzel) charts.einzel.destroy();
+  charts.einzel = new Chart(document.getElementById('chart-einzel'), {
+    type:'line',
+    data:{ labels, datasets: einzel_ds },
+    options: mkOpts()
+  });
+}
+
+function mkOpts() {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{ labels:{ color:'#666', font:{family:'IBM Plex Mono',size:10}, boxWidth:16 }},
+      tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('de-DE')}€` }}
+    },
+    scales:{
+      y:{ ticks:{ callback: v => v>=1000000?(v/1000000).toFixed(1)+'M€':(v/1000).toFixed(0)+'k€', color:'#999', font:{family:'IBM Plex Mono',size:10}}, grid:{color:'rgba(0,0,0,0.05)'}},
+      x:{ ticks:{ color:'#999', font:{family:'IBM Plex Mono',size:10}, maxTicksLimit:10, maxRotation:0}, grid:{display:false}}
+    }
+  };
+}
+
+function fmt(n) { return Math.round(n).toLocaleString('de-DE'); }
+function showError(msg) { document.getElementById('main').innerHTML = `<div class="error-box">⚠ ${msg}</div>`; }
+
+renderAssets();
+</script>
+</body>
+</html>

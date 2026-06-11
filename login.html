@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Backtesting Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #0d0d0d;
+  --gray1: #1a1a1a;
+  --gray2: #333;
+  --gray3: #666;
+  --gray4: #999;
+  --gray5: #ccc;
+  --gray6: #e8e8e8;
+  --gray7: #f0f0ee;
+  --bg: #f5f4f0;
+  --white: #fff;
+  --border: #d4d4d0;
+  --green: #1a6644;
+  --red: #8b1a1a;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', serif;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  font-family: var(--sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: var(--black);
+  color: white;
+  padding: 0 2rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+}
+.logo { font-family: var(--serif); font-size: 1.1rem; }
+.logo-sub { font-family: var(--mono); font-size: 0.6rem; color: #888; letter-spacing: 0.2em; margin-top: 1px; }
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 1rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--gray3);
+  border: none;
+  background: none;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab.active {
+  color: var(--black);
+  background: var(--gray7);
+  border-bottom: 2px solid var(--black);
+}
+
+.form-body { padding: 2rem; }
+
+.field { margin-bottom: 1rem; }
+label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gray3);
+  margin-bottom: 0.35rem;
+}
+
+input {
+  width: 100%;
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--black);
+  padding: 0.6rem 0.75rem;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus { border-color: var(--black); }
+
+.btn {
+  width: 100%;
+  background: var(--black);
+  color: white;
+  border: none;
+  padding: 0.85rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+}
+.btn:hover { background: var(--gray2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.msg {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  display: none;
+}
+.msg.error { background: #fff5f5; border: 1px solid #fca5a5; color: var(--red); display: block; }
+.msg.success { background: #f0fff4; border: 1px solid #86efac; color: var(--green); display: block; }
+
+.form-panel { display: none; }
+.form-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Backtesting Engine</div>
+    <div class="logo-sub">Portfolio Simulation System</div>
+  </div>
+</header>
+
+<div class="center">
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Login</button>
+      <button class="tab" onclick="switchTab('register')">Registrieren</button>
+    </div>
+
+    <!-- Login -->
+    <div class="form-panel active" id="panel-login">
+      <div class="form-body">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="login-username" placeholder="dein username">
+        </div>
+        <div class="field">
+          <label>Passwort</label>
+          <input type="password" id="login-password" placeholder="••••••••">
+        </div>
+        <button class="btn" onclick="login()">EINLOGGEN</button>
+        <div class="msg" id="login-msg"></div>
+      </div>
+    </div>
+
+    <!-- Register -->
+    <div class="form-panel" id="panel-register">
+      <div class="form-body">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="reg-username" placeholder="dein username">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="reg-email" placeholder="deine@email.de">
+        </div>
+        <div class="field">
+          <label>Passwort</label>
+          <input type="password" id="reg-password" placeholder="min. 6 Zeichen">
+        </div>
+        <button class="btn" onclick="register()">REGISTRIEREN</button>
+        <div class="msg" id="reg-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+async function login() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+
+  if (!username || !password) {
+    showMsg(msg, 'Bitte alle Felder ausfüllen', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showMsg(msg, data.detail || 'Login fehlgeschlagen', 'error');
+      return;
+    }
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('username', data.username);
+    window.location.href = 'index.html';
+
+  } catch(e) {
+    showMsg(msg, 'Server nicht erreichbar', 'error');
+  }
+}
+
+async function register() {
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const msg = document.getElementById('reg-msg');
+
+  if (!username || !email || !password) {
+    showMsg(msg, 'Bitte alle Felder ausfüllen', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showMsg(msg, data.detail || 'Registrierung fehlgeschlagen', 'error');
+      return;
+    }
+
+    showMsg(msg, 'Registrierung erfolgreich – bitte einloggen', 'success');
+    setTimeout(() => switchTab('login'), 1500);
+
+  } catch(e) {
+    showMsg(msg, 'Server nicht erreichbar', 'error');
+  }
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = `msg ${type}`;
+}
+
+// Enter Taste
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('panel-login').classList.contains('active')) login();
+    else register();
+  }
+});
+
+// Wenn schon eingeloggt direkt weiter
+if (localStorage.getItem('token')) {
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>
