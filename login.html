@@ -203,7 +203,7 @@ input:focus { border-color: var(--black); }
 </div>
 
 <script>
-const API = 'http://localhost:8000';
+const API = window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:8000';
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -238,7 +238,7 @@ async function login() {
 
     localStorage.setItem('token', data.token);
     localStorage.setItem('username', data.username);
-    window.location.href = 'index.html';
+    window.location.href = 'dashboard.html';
 
   } catch(e) {
     showMsg(msg, 'Server nicht erreichbar', 'error');
@@ -293,7 +293,7 @@ document.addEventListener('keydown', e => {
 
 // Wenn schon eingeloggt direkt weiter
 if (localStorage.getItem('token')) {
-  window.location.href = 'index.html';
+  window.location.href = 'dashboard.html';
 }
 </script>
 </body>

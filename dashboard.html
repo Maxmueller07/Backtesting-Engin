@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzdashboard - Backtesting Engine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f4f0;
+  --white: #ffffff;
+  --black: #0d0d0d;
+  --gray2: #333333;
+  --gray3: #666666;
+  --gray4: #999999;
+  --gray6: #e8e8e8;
+  --gray7: #f0f0ee;
+  --border: #d4d4d0;
+  --green: #1a6644;
+  --red: #8b1a1a;
+  --gold: #8b6914;
+  --mono: 'IBM Plex Mono', monospace;
+  --serif: 'Playfair Display', serif;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--black); font-family: var(--sans); min-height: 100vh; }
+header {
+  height: 56px; padding: 0 2rem; background: var(--black); color: white;
+  display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10;
+}
+.logo { font-family: var(--serif); font-size: 1.1rem; }
+.logo-sub { font-family: var(--mono); font-size: 0.6rem; color: #888; letter-spacing: 0.2em; margin-top: 1px; }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; }
+.nav-link {
+  border: 1px solid #444; background: transparent; color: #eee; padding: 0.38rem 0.58rem;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+}
+.nav-link:hover { background: #1f1f1f; }
+.layout { display: grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 56px); }
+.sidebar { background: var(--white); border-right: 1px solid var(--border); padding: 1.25rem; overflow-y: auto; }
+.main { padding: 1.5rem; display: grid; gap: 1rem; align-content: start; }
+.section-title {
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gray3); padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem;
+}
+.field { margin-bottom: 0.8rem; }
+label {
+  display: block; font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--gray3); margin-bottom: 0.3rem;
+}
+input, select {
+  width: 100%; background: var(--white); border: 1px solid var(--border); color: var(--black);
+  padding: 0.48rem 0.7rem; border-radius: 3px; font-family: var(--mono); font-size: 0.78rem; outline: none;
+}
+input:focus, select:focus { border-color: var(--black); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.asset-form-row { display: grid; grid-template-columns: 0.8fr 1fr 0.8fr 0.8fr 0.7fr 26px; gap: 0.4rem; align-items: end; margin-bottom: 0.45rem; }
+.mini-btn {
+  border: 1px solid var(--border); background: var(--gray7); height: 34px; cursor: pointer;
+  font-family: var(--mono); font-size: 0.7rem;
+}
+.mini-btn:hover { border-color: var(--black); }
+.run-btn {
+  width: 100%; background: var(--black); color: white; border: none; padding: 0.82rem;
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer; margin-top: 0.4rem;
+}
+.run-btn:disabled { opacity: 0.45; cursor: wait; }
+.portfolio-list { display: grid; gap: 0.65rem; margin-top: 1rem; }
+.portfolio-item {
+  border: 1px solid var(--border); background: var(--white); padding: 0.75rem; cursor: pointer;
+  display: grid; gap: 0.3rem;
+}
+.portfolio-item.active { border-color: var(--black); box-shadow: inset 3px 0 0 var(--black); }
+.portfolio-head { display: flex; justify-content: space-between; gap: 0.7rem; align-items: baseline; }
+.portfolio-name { font-family: var(--serif); font-size: 1.05rem; }
+.portfolio-meta { font-family: var(--mono); color: var(--gray4); font-size: 0.62rem; }
+.portfolio-return.green { color: var(--green); }
+.portfolio-return.red { color: var(--red); }
+.dashboard-toolbar {
+  background: var(--white); border: 1px solid var(--border); padding: 1rem;
+  display: flex; justify-content: space-between; gap: 1rem; align-items: center;
+}
+.dashboard-title { font-family: var(--serif); font-size: 1.35rem; line-height: 1.1; }
+.dashboard-sub { font-family: var(--mono); font-size: 0.62rem; color: var(--gray4); margin-top: 0.25rem; }
+.action-row { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+.outline-btn {
+  border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 0.55rem 0.7rem;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+}
+.outline-btn:hover { background: var(--gray7); }
+.outline-btn.primary { background: var(--black); color: var(--white); }
+.compare-box {
+  border: 1px solid var(--border); background: var(--gray7); padding: 0.75rem;
+  display: grid; gap: 0.6rem;
+}
+.compare-box .field { margin-bottom: 0; }
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.compare-name { font-family: var(--serif); font-size: 1.05rem; margin-bottom: 0.25rem; }
+.compare-meta { font-family: var(--mono); font-size: 0.62rem; color: var(--gray4); }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.kpi { background: var(--white); padding: 1rem; }
+.kpi-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray3); margin-bottom: 0.45rem; }
+.kpi-value { font-family: var(--serif); font-size: 1.45rem; line-height: 1; }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.chart-grid { display: grid; grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr); gap: 1rem; }
+.chart-card { background: var(--white); border: 1px solid var(--border); }
+.chart-header { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.chart-title { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gray3); }
+.chart-body { height: 315px; padding: 1rem; position: relative; }
+.notice, .error-box {
+  background: var(--white); border: 1px solid var(--border); padding: 0.9rem 1rem;
+  font-family: var(--mono); font-size: 0.72rem; color: var(--gray3); line-height: 1.45;
+}
+.error-box { background: #fff5f5; border-color: #fca5a5; color: var(--red); }
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; }
+  .chart-grid { grid-template-columns: 1fr; }
+  .dashboard-toolbar { align-items: stretch; flex-direction: column; }
+  .action-row { justify-content: stretch; }
+  .outline-btn { flex: 1; text-align: center; }
+  .asset-form-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">Finanzdashboard</div>
+    <div class="logo-sub">Portfolio Tracking & Backtesting</div>
+  </div>
+  <div class="header-actions">
+    <a class="nav-link" href="index.html">Backtesting</a>
+    <button class="nav-link" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="section-title">Portfolio speichern</div>
+    <div class="field"><label>Name</label><input id="portfolio-name" value="Mein Portfolio"></div>
+    <div class="row2">
+      <div class="field"><label>Startkapital</label><input type="number" id="portfolio-capital" value="10000" min="1"></div>
+      <div class="field"><label>Basiswaehrung</label><select id="portfolio-base"></select></div>
+    </div>
+    <div class="section-title" style="margin-top:1.2rem;">Assets</div>
+    <div id="portfolio-assets"></div>
+    <button class="mini-btn" style="width:100%;margin-top:0.2rem;" onclick="addPortfolioRow()">+ Asset</button>
+    <button class="run-btn" id="save-btn" onclick="savePortfolio()">Portfolio speichern</button>
+    <div id="form-msg" class="notice" style="display:none;margin-top:0.8rem;"></div>
+
+    <div class="section-title" style="margin-top:1.5rem;">Gespeichert</div>
+    <div id="portfolio-list" class="portfolio-list"></div>
+
+    <div class="section-title" style="margin-top:1.5rem;">Vergleich</div>
+    <div class="compare-box">
+      <div class="field"><label>Portfolio A</label><select id="compare-a"></select></div>
+      <div class="field"><label>Portfolio B</label><select id="compare-b"></select></div>
+      <button class="run-btn" id="compare-btn" onclick="compareSelectedPortfolios()">Portfolios vergleichen</button>
+      <div id="compare-msg" class="notice" style="display:none;"></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="notice">Portfolio speichern oder ein gespeichertes Portfolio auswaehlen.</div>
+  </main>
+</div>
+
+<script>
+const API = window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:8000';
+const TOKEN = localStorage.getItem('token');
+const colors = ['#1a6644','#8b1a1a','#8b6914','#1a3a6b','#4a1a6b','#1a5a6b','#6b4a1a','#1a6b4a','#6b1a4a','#3a6b1a'];
+const currencies = ['AUTO','EUR','USD','CHF','GBP','GBp','JPY','CAD','AUD'];
+let rows = [
+  {symbol:'AAPL', name:'Apple', anteil:50, waehrung:'AUTO', steuer_typ:'aktie'},
+  {symbol:'MSFT', name:'Microsoft', anteil:50, waehrung:'AUTO', steuer_typ:'aktie'},
+];
+let dashboards = [];
+let activeId = null;
+let charts = {};
+let compareIds = [];
+
+if (!TOKEN) window.location.href = 'login.html';
+
+function currencyOptions(selected='AUTO', includeAuto=true) {
+  return currencies.filter(c => includeAuto || c !== 'AUTO')
+    .map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+}
+
+function taxTypeOptions(selected='aktie') {
+  const types = [['aktie','Aktie'],['fonds_etf','ETF/Fonds'],['crypto','Crypto'],['sonstige','Sonstige']];
+  return types.map(([value,label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
+}
+
+function renderRows() {
+  const baseSelect = document.getElementById('portfolio-base');
+  const selectedBase = baseSelect.value || 'EUR';
+  baseSelect.innerHTML = currencyOptions(selectedBase, false);
+  const wrap = document.getElementById('portfolio-assets');
+  wrap.innerHTML = rows.map((row, i) => `
+    <div class="asset-form-row">
+      <div class="field"><label>Symbol</label><input value="${escapeHtml(row.symbol)}" oninput="rows[${i}].symbol=this.value.toUpperCase().trim()"></div>
+      <div class="field"><label>Name</label><input value="${escapeHtml(row.name)}" oninput="rows[${i}].name=this.value"></div>
+      <div class="field"><label>Waehrung</label><select onchange="rows[${i}].waehrung=this.value">${currencyOptions(row.waehrung || 'AUTO')}</select></div>
+      <div class="field"><label>Steuer</label><select onchange="rows[${i}].steuer_typ=this.value">${taxTypeOptions(row.steuer_typ || 'aktie')}</select></div>
+      <div class="field"><label>Anteil</label><input type="number" value="${row.anteil}" min="1" max="100" oninput="rows[${i}].anteil=Number(this.value)"></div>
+      <button class="mini-btn" onclick="removePortfolioRow(${i})">x</button>
+    </div>
+  `).join('');
+}
+
+function addPortfolioRow() {
+  rows.push({symbol:'', name:'', anteil:0, waehrung:'AUTO', steuer_typ:'aktie'});
+  renderRows();
+}
+
+function removePortfolioRow(index) {
+  rows.splice(index, 1);
+  renderRows();
+}
+
+async function savePortfolio() {
+  const btn = document.getElementById('save-btn');
+  const msg = document.getElementById('form-msg');
+  const assets = rows
+    .filter(r => r.symbol && Number(r.anteil) > 0)
+    .map(r => ({symbol:r.symbol, name:r.name || r.symbol, anteil:Number(r.anteil), waehrung:r.waehrung || 'AUTO', steuer_typ:r.steuer_typ || 'aktie', regeln:{}}));
+  const total = assets.reduce((sum, a) => sum + a.anteil, 0);
+  if (!assets.length || total !== 100) {
+    showMsg(`Anteile ergeben ${total}%. Bitte genau 100% setzen.`, true);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Speichere...';
+  try {
+    const res = await fetch(`${API}/portfolios`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:`Bearer ${TOKEN}`},
+      body: JSON.stringify({
+        name: document.getElementById('portfolio-name').value.trim() || 'Portfolio',
+        startkapital: Number(document.getElementById('portfolio-capital').value),
+        basiswaehrung: document.getElementById('portfolio-base').value,
+        assets,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `API Fehler ${res.status}`);
+    showMsg('Portfolio gespeichert. Dashboard wird aktualisiert.', false);
+    await loadDashboard();
+  } catch(e) {
+    showMsg(e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Portfolio speichern';
+  }
+}
+
+async function loadDashboard() {
+  try {
+    const res = await fetch(`${API}/dashboard/portfolios`, {
+      headers:{Authorization:`Bearer ${TOKEN}`},
+    });
+    if (res.status === 401 || res.status === 403) {
+      logout();
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `API Fehler ${res.status}`);
+    dashboards = data.portfolios || [];
+    activeId = activeId || dashboards[0]?.id || null;
+    renderPortfolioList();
+    renderCompareControls();
+    renderActivePortfolio();
+  } catch(e) {
+    document.getElementById('main').innerHTML = `<div class="error-box">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderPortfolioList() {
+  const list = document.getElementById('portfolio-list');
+  if (!dashboards.length) {
+    list.innerHTML = '<div class="notice">Noch kein Portfolio gespeichert.</div>';
+    return;
+  }
+  list.innerHTML = dashboards.map(p => {
+    const pos = p.total_return >= 0;
+    return `
+      <div class="portfolio-item ${p.id === activeId ? 'active' : ''}" onclick="selectPortfolio(${p.id})">
+        <div class="portfolio-head">
+          <div class="portfolio-name">${escapeHtml(p.name)}</div>
+          <div class="portfolio-return ${pos ? 'green' : 'red'}">${pos ? '+' : ''}${Number(p.total_return_pct || 0).toFixed(1)}%</div>
+        </div>
+        <div class="portfolio-meta">${money(p.current_value, p.basiswaehrung)} seit ${escapeHtml(p.tracking_start || p.created_at || '-')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderCompareControls() {
+  const selectA = document.getElementById('compare-a');
+  const selectB = document.getElementById('compare-b');
+  const button = document.getElementById('compare-btn');
+  if (!selectA || !selectB || !button) return;
+
+  const previousA = selectA.value;
+  const previousB = selectB.value;
+  const options = dashboards.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  selectA.innerHTML = options || '<option value="">Kein Portfolio</option>';
+  selectB.innerHTML = options || '<option value="">Kein Portfolio</option>';
+
+  const first = compareIds[0] || previousA || String(dashboards[0]?.id || '');
+  const second = compareIds[1] || previousB || String(dashboards.find(p => !sameId(p.id, first))?.id || first || '');
+  selectA.value = first;
+  selectB.value = second;
+  button.disabled = false;
+}
+
+function sameId(left, right) {
+  return String(left) === String(right);
+}
+
+function findDashboard(id) {
+  return dashboards.find(p => sameId(p.id, id));
+}
+
+function showCompareMessage(text, isError=true) {
+  const msg = document.getElementById('compare-msg');
+  if (!msg) return;
+  msg.style.display = 'block';
+  msg.className = isError ? 'error-box' : 'notice';
+  msg.textContent = text;
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(chart => {
+    if (chart && typeof chart.destroy === 'function') chart.destroy();
+  });
+  charts = {};
+}
+
+function selectPortfolio(id) {
+  activeId = id;
+  renderPortfolioList();
+  renderActivePortfolio();
+}
+
+function renderActivePortfolio() {
+  const portfolio = dashboards.find(p => p.id === activeId);
+  const main = document.getElementById('main');
+  destroyCharts();
+  if (!portfolio) {
+    main.innerHTML = '<div class="notice">Portfolio speichern oder auswaehlen.</div>';
+    return;
+  }
+
+  const pos = portfolio.total_return >= 0;
+  const errors = (portfolio.errors || []).map(e => `<div class="error-box">${escapeHtml(e.symbol)}: ${escapeHtml(e.message)}</div>`).join('');
+  main.innerHTML = `
+    <div class="dashboard-toolbar">
+      <div>
+        <div class="dashboard-title">${escapeHtml(portfolio.name)}</div>
+        <div class="dashboard-sub">${escapeHtml(portfolio.tracking_start || portfolio.created_at || '-')} bis ${escapeHtml(portfolio.tracking_end || 'heute')}</div>
+      </div>
+      <div class="action-row">
+        <button class="outline-btn" onclick="prefillCompare(${portfolio.id})">Vergleichen</button>
+        <button class="outline-btn primary" onclick="openBacktest(${portfolio.id})">Portfolio backtesten</button>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Aktueller Wert</div><div class="kpi-value">${money(portfolio.current_value, portfolio.basiswaehrung)}</div></div>
+      <div class="kpi"><div class="kpi-label">Startkapital</div><div class="kpi-value">${money(portfolio.startkapital, portfolio.basiswaehrung)}</div></div>
+      <div class="kpi"><div class="kpi-label">Entwicklung</div><div class="kpi-value ${pos ? 'green' : 'red'}">${pos ? '+' : ''}${money(portfolio.total_return, portfolio.basiswaehrung)}</div></div>
+      <div class="kpi"><div class="kpi-label">Rendite</div><div class="kpi-value ${pos ? 'green' : 'red'}">${pos ? '+' : ''}${Number(portfolio.total_return_pct || 0).toFixed(1)}%</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Aufteilung</span></div>
+        <div class="chart-body"><canvas id="allocation-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Entwicklung seit Speicherung</span>
+          <button class="nav-link" style="color:#111;border-color:#bbb;" onclick="openBacktest(${portfolio.id})">Backtest</button>
+        </div>
+        <div class="chart-body"><canvas id="history-chart"></canvas></div>
+      </div>
+    </div>
+    ${errors}
+  `;
+  renderCharts(portfolio);
+}
+
+function renderCharts(portfolio) {
+  const allocation = portfolio.current_allocation || portfolio.target_allocation || [];
+  if (charts.alloc) charts.alloc.destroy();
+  charts.alloc = new Chart(document.getElementById('allocation-chart'), {
+    type:'doughnut',
+    data:{
+      labels: allocation.map(a => a.symbol),
+      datasets:[{data: allocation.map(a => Number(a.anteil || 0)), backgroundColor: colors}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{font:{family:'IBM Plex Mono',size:10}}}}
+    }
+  });
+
+  const labels = portfolio.history?.labels || [];
+  const datasets = [{
+    label:'Portfolio',
+    data: portfolio.history?.total || [],
+    borderColor:'#0d0d0d',
+    borderWidth:2.2,
+    pointRadius:0,
+    tension:0.25,
+  }];
+  Object.entries(portfolio.history?.assets || {}).forEach(([symbol, series], i) => {
+    datasets.push({label:symbol, data:series, borderColor:colors[i % colors.length], borderWidth:1.4, pointRadius:0, tension:0.25});
+  });
+
+  if (charts.hist) charts.hist.destroy();
+  charts.hist = new Chart(document.getElementById('history-chart'), {
+    type:'line',
+    data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{font:{family:'IBM Plex Mono',size:10}, boxWidth:16}},
+        tooltip:{callbacks:{label: ctx => ` ${ctx.dataset.label}: ${money(ctx.parsed.y, portfolio.basiswaehrung)}`}},
+      },
+      scales:{
+        y:{ticks:{callback:v => compactMoney(v, portfolio.basiswaehrung), font:{family:'IBM Plex Mono',size:10}, color:'#999'}, grid:{color:'rgba(0,0,0,0.05)'}},
+        x:{ticks:{font:{family:'IBM Plex Mono',size:10}, color:'#999', maxTicksLimit:8}, grid:{display:false}},
+      }
+    }
+  });
+}
+
+function prefillCompare(id) {
+  if (dashboards.length < 2) {
+    showCompareMessage('Zum Vergleichen brauchst du mindestens zwei gespeicherte Portfolios.');
+    return;
+  }
+  const other = dashboards.find(p => !sameId(p.id, id));
+  compareIds = [String(id), String(other?.id || id)];
+  renderCompareControls();
+  compareSelectedPortfolios();
+}
+
+function compareSelectedPortfolios() {
+  const firstId = document.getElementById('compare-a').value;
+  const secondId = document.getElementById('compare-b').value;
+  if (dashboards.length < 2) {
+    showCompareMessage('Zum Vergleichen brauchst du mindestens zwei gespeicherte Portfolios.');
+    return;
+  }
+  if (!firstId || !secondId || sameId(firstId, secondId)) {
+    document.getElementById('main').innerHTML = '<div class="notice">Bitte zwei unterschiedliche Portfolios auswaehlen.</div>';
+    showCompareMessage('Bitte zwei unterschiedliche Portfolios auswaehlen.');
+    return;
+  }
+  compareIds = [String(firstId), String(secondId)];
+  renderCompareControls();
+  renderCompareView(firstId, secondId);
+}
+
+function renderCompareView(firstId, secondId) {
+  const first = findDashboard(firstId);
+  const second = findDashboard(secondId);
+  const main = document.getElementById('main');
+  destroyCharts();
+  if (!first || !second) {
+    main.innerHTML = '<div class="notice">Vergleich konnte nicht geladen werden.</div>';
+    showCompareMessage('Vergleich konnte nicht geladen werden.');
+    return;
+  }
+  showCompareMessage('Vergleich geladen.', false);
+
+  const sameCurrency = first.basiswaehrung === second.basiswaehrung;
+  const currency = sameCurrency ? first.basiswaehrung : '';
+  const diffReturn = Number(first.total_return_pct || 0) - Number(second.total_return_pct || 0);
+  const diffValue = sameCurrency ? Number(first.current_value || 0) - Number(second.current_value || 0) : null;
+  const diffPos = diffReturn >= 0;
+  const firstPos = Number(first.total_return || 0) >= 0;
+  const secondPos = Number(second.total_return || 0) >= 0;
+
+  main.innerHTML = `
+    <div class="dashboard-toolbar">
+      <div>
+        <div class="dashboard-title">Portfolio Vergleich</div>
+        <div class="dashboard-sub">${escapeHtml(first.name)} gegen ${escapeHtml(second.name)}</div>
+      </div>
+      <div class="action-row">
+        <button class="outline-btn" onclick="openBacktest(${first.id})">A backtesten</button>
+        <button class="outline-btn" onclick="openBacktest(${second.id})">B backtesten</button>
+      </div>
+    </div>
+    <div class="compare-grid">
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Portfolio A</span></div>
+        <div class="kpi">
+          <div class="compare-name">${escapeHtml(first.name)}</div>
+          <div class="compare-meta">${money(first.current_value, first.basiswaehrung)} | ${Number(first.total_return_pct || 0).toFixed(1)}%</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Portfolio B</span></div>
+        <div class="kpi">
+          <div class="compare-name">${escapeHtml(second.name)}</div>
+          <div class="compare-meta">${money(second.current_value, second.basiswaehrung)} | ${Number(second.total_return_pct || 0).toFixed(1)}%</div>
+        </div>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">A Rendite</div><div class="kpi-value ${firstPos ? 'green' : 'red'}">${Number(first.total_return_pct || 0).toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">B Rendite</div><div class="kpi-value ${secondPos ? 'green' : 'red'}">${Number(second.total_return_pct || 0).toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">Rendite Differenz</div><div class="kpi-value ${diffPos ? 'green' : 'red'}">${diffPos ? '+' : ''}${diffReturn.toFixed(1)} pp</div></div>
+      <div class="kpi"><div class="kpi-label">Wert Differenz</div><div class="kpi-value ${diffValue === null || diffValue >= 0 ? 'green' : 'red'}">${diffValue === null ? 'FX' : `${diffValue >= 0 ? '+' : ''}${money(diffValue, currency)}`}</div></div>
+    </div>
+    ${sameCurrency ? '' : '<div class="notice">Hinweis: Die Portfolios haben unterschiedliche Basiswaehrungen. Absolute Wertdifferenzen werden deshalb nicht verrechnet.</div>'}
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Entwicklung Vergleich</span></div>
+        <div class="chart-body"><canvas id="compare-history-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><span class="chart-title">Ziel-Allokation Vergleich</span></div>
+        <div class="chart-body"><canvas id="compare-allocation-chart"></canvas></div>
+      </div>
+    </div>
+  `;
+  renderCompareCharts(first, second);
+}
+
+function alignSeries(labels, sourceLabels=[], sourceValues=[]) {
+  const lookup = new Map(sourceLabels.map((label, index) => [label, sourceValues[index]]));
+  return labels.map(label => lookup.has(label) ? lookup.get(label) : null);
+}
+
+function allocationMap(portfolio) {
+  const entries = portfolio.target_allocation || portfolio.current_allocation || [];
+  return new Map(entries.map(item => [item.symbol, Number(item.anteil || 0)]));
+}
+
+function renderCompareCharts(first, second) {
+  const labels = Array.from(new Set([...(first.history?.labels || []), ...(second.history?.labels || [])])).sort();
+  charts.compareHist = new Chart(document.getElementById('compare-history-chart'), {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:first.name, data:alignSeries(labels, first.history?.labels || [], first.history?.total || []), borderColor:'#0d0d0d', borderWidth:2.2, pointRadius:0, tension:0.25},
+        {label:second.name, data:alignSeries(labels, second.history?.labels || [], second.history?.total || []), borderColor:'#1a6644', borderWidth:2.2, pointRadius:0, tension:0.25},
+      ],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{family:'IBM Plex Mono',size:10}, boxWidth:16}}},
+      scales:{
+        y:{ticks:{callback:v => compactMoney(v, first.basiswaehrung), font:{family:'IBM Plex Mono',size:10}, color:'#999'}, grid:{color:'rgba(0,0,0,0.05)'}},
+        x:{ticks:{font:{family:'IBM Plex Mono',size:10}, color:'#999', maxTicksLimit:8}, grid:{display:false}},
+      },
+    },
+  });
+
+  const firstAllocation = allocationMap(first);
+  const secondAllocation = allocationMap(second);
+  const symbols = Array.from(new Set([...firstAllocation.keys(), ...secondAllocation.keys()])).sort();
+  charts.compareAlloc = new Chart(document.getElementById('compare-allocation-chart'), {
+    type:'bar',
+    data:{
+      labels:symbols,
+      datasets:[
+        {label:first.name, data:symbols.map(symbol => firstAllocation.get(symbol) || 0), backgroundColor:'#0d0d0d'},
+        {label:second.name, data:symbols.map(symbol => secondAllocation.get(symbol) || 0), backgroundColor:'#1a6644'},
+      ],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{font:{family:'IBM Plex Mono',size:10}, boxWidth:16}}},
+      scales:{
+        y:{ticks:{callback:v => `${v}%`, font:{family:'IBM Plex Mono',size:10}, color:'#999'}, grid:{color:'rgba(0,0,0,0.05)'}},
+        x:{ticks:{font:{family:'IBM Plex Mono',size:10}, color:'#999', maxRotation:45}, grid:{display:false}},
+      },
+    },
+  });
+}
+
+function openBacktest(id) {
+  const raw = findDashboard(id);
+  if (!raw) return;
+  const portfolio = {
+    name: raw.name,
+    startkapital: raw.startkapital,
+    basiswaehrung: raw.basiswaehrung,
+    assets: (raw.target_allocation || []).map(a => ({
+      symbol: a.symbol,
+      name: a.name || a.symbol,
+      anteil: Math.round(Number(a.anteil || 0)),
+      waehrung: a.waehrung || 'AUTO',
+      steuer_typ: a.steuer_typ || 'aktie',
+      regeln: {},
+    })),
+  };
+  localStorage.setItem('dashboardPortfolio', JSON.stringify(portfolio));
+  window.location.href = 'index.html';
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  window.location.href = 'login.html';
+}
+
+function showMsg(text, isError) {
+  const msg = document.getElementById('form-msg');
+  msg.style.display = 'block';
+  msg.className = isError ? 'error-box' : 'notice';
+  msg.textContent = text;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmt(n) { return Math.round(Number(n || 0)).toLocaleString('de-DE'); }
+function money(n, currency='EUR') { return `${fmt(n)} ${currency}`; }
+function compactMoney(n, currency='EUR') {
+  const value = Number(n || 0);
+  if (Math.abs(value) >= 1000000) return `${(value / 1000000).toFixed(1)}M ${currency}`;
+  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(0)}k ${currency}`;
+  return `${fmt(value)} ${currency}`;
+}
+
+renderRows();
+loadDashboard();
+</script>
+</body>
+</html>

@@ -25,6 +25,7 @@
   --mono: 'IBM Plex Mono', monospace;
   --serif: 'Playfair Display', serif;
   --sans: 'IBM Plex Sans', sans-serif;
+  --sidebar-width: 380px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--black); font-family: var(--sans); min-height: 100vh; }
@@ -39,13 +40,76 @@ header {
 .logo-sub { font-family: var(--mono); font-size: 0.6rem; color: #888; letter-spacing: 0.2em; margin-top: 1px; }
 .api-status { font-family: var(--mono); font-size: 0.65rem; color: #888; display: flex; align-items: center; gap: 6px; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; }
+.nav-link {
+  border: 1px solid #444; background: transparent; color: #eee; padding: 0.35rem 0.55rem;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none;
+}
+.nav-link:hover { background: #1f1f1f; }
+.agent-panel { background: var(--white); border-bottom: 2px solid var(--black); }
+.agent-panel summary {
+  list-style: none; cursor: pointer; padding: 1rem 1.5rem;
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.15em;
+  text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;
+}
+.agent-panel summary::-webkit-details-marker { display: none; }
+.agent-options { padding: 0 1.5rem 1.2rem; display: grid; gap: 0.6rem; }
+.agent-option { display: grid; grid-template-columns: 18px 1fr; gap: 0.65rem; align-items: flex-start; padding: 0.55rem 0; border-top: 1px solid var(--gray6); }
+.agent-option input { margin-top: 2px; accent-color: var(--black); }
+.agent-option-title { font-size: 0.8rem; color: var(--gray2); }
+.agent-option-sub { font-family: var(--mono); font-size: 0.62rem; color: var(--gray4); margin-top: 2px; line-height: 1.4; }
+.agent-option textarea {
+  width: 100%; min-height: 38px; max-height: 90px; resize: vertical; margin-top: 0.45rem;
+  border: 1px solid var(--border); border-radius: 3px; padding: 0.45rem 0.55rem;
+  font-family: var(--mono); font-size: 0.68rem; line-height: 1.35; color: var(--gray2);
+  background: var(--white); outline: none;
+}
+.agent-option textarea:focus { border-color: var(--black); }
+.asset-row { position: relative; }
+.asset-row:hover { background: var(--gray7); }
+.agent-tooltip {
+  position: fixed; z-index: 1000; width: min(330px, calc(100vw - 24px)); max-height: min(430px, calc(100vh - 24px));
+  overflow-y: auto; background: var(--white); border: 1px solid var(--black);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.14); padding: 0.8rem; display: none;
+}
+.agent-tooltip.open { display: block; }
+.agent-tooltip-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start; margin-bottom: 0.65rem; }
+.agent-tooltip-title { font-family: var(--serif); font-size: 0.95rem; line-height: 1.2; }
+.agent-tooltip-symbol { font-family: var(--mono); font-size: 0.62rem; color: var(--gray3); margin-top: 0.15rem; }
+.agent-close { border: none; background: var(--gray7); width: 24px; height: 24px; cursor: pointer; font-size: 1rem; line-height: 1; }
+.agent-run-btn { background: var(--black); color: var(--white); border: none; width: 100%; padding: 0.55rem; font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; margin-bottom: 0.65rem; }
+.agent-run-btn:disabled { opacity: 0.45; cursor: wait; }
+.agent-result { font-size: 0.74rem; color: var(--gray2); line-height: 1.45; }
+.agent-result h4 { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--black); margin: 0.7rem 0 0.3rem; }
+.agent-result ul { margin-left: 1rem; }
+.agent-muted { font-family: var(--mono); font-size: 0.66rem; color: var(--gray4); }
 
-.layout { display: grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 56px); }
+.layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 10px minmax(0, 1fr);
+  min-height: calc(100vh - 56px);
+}
 
 .sidebar {
   background: var(--white); border-right: 1px solid var(--border);
   overflow-y: auto; position: sticky; top: 56px; height: calc(100vh - 56px);
 }
+.sidebar-resizer {
+  position: sticky; top: 56px; height: calc(100vh - 56px); z-index: 60;
+  cursor: col-resize; background: linear-gradient(90deg, transparent 0, transparent 3px, var(--border) 3px, var(--border) 7px, transparent 7px);
+  border-right: 1px solid rgba(0,0,0,0.04); touch-action: none;
+}
+.sidebar-resizer::before {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 2px; height: 58px; border-radius: 2px; background: var(--gray5);
+}
+.sidebar-resizer:hover::before,
+.sidebar-resizer:focus-visible::before,
+body.resizing-sidebar .sidebar-resizer::before { background: var(--black); }
+.sidebar-resizer:focus-visible { outline: 2px solid var(--black); outline-offset: -2px; }
+body.resizing-sidebar { cursor: col-resize; user-select: none; }
+body.resizing-sidebar * { cursor: col-resize !important; user-select: none; }
 
 .accordion-item { border-bottom: 1px solid var(--border); }
 .accordion-header {
@@ -79,6 +143,7 @@ input:focus, select:focus { border-color: var(--black); }
 
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+.row4 { display: grid; grid-template-columns: 0.9fr 1fr 0.8fr 0.8fr 0.7fr; gap: 0.5rem; }
 
 .asset-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-bottom: 0.75rem; }
 .asset-table th { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray3); padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); text-align: left; font-weight: 400; }
@@ -86,6 +151,7 @@ input:focus, select:focus { border-color: var(--black); }
 .asset-table tr:last-child td { border-bottom: none; }
 
 .symbol-badge { font-family: var(--mono); font-size: 0.72rem; font-weight: 500; background: var(--gray7); border: 1px solid var(--border); padding: 2px 5px; border-radius: 2px; }
+.mini-select { padding: 0.25rem 0.35rem; font-size: 0.66rem; min-width: 72px; }
 .remove-btn { background: none; border: none; color: var(--gray4); cursor: pointer; font-size: 1rem; padding: 2px 4px; border-radius: 2px; transition: all 0.15s; line-height: 1; }
 .remove-btn:hover { color: var(--red); background: #fff0f0; }
 
@@ -96,6 +162,33 @@ input:focus, select:focus { border-color: var(--black); }
 .total-val.err { color: var(--red); }
 
 .add-form { background: var(--gray7); border: 1px solid var(--border); border-radius: 3px; padding: 0.75rem; margin-top: 0.5rem; }
+.asset-add-form { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.1fr); gap: 0.7rem 0.55rem; padding: 0.85rem; }
+.asset-add-grid { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.65rem; align-items: end; }
+.asset-add-grid .field { margin-bottom: 0; }
+.asset-add-grid .field:nth-child(5) { grid-column: 1 / -1; }
+.asset-add-grid .field:nth-child(5) input { text-align: right; font-size: 0.86rem; padding-right: 0.75rem; }
+.asset-add-form > .run-btn {
+  margin: 0 !important; min-height: 40px; padding: 0.62rem 0.55rem !important;
+  font-size: 0.63rem !important; letter-spacing: 0.08em; line-height: 1.2; white-space: normal;
+}
+.compare-panel { display: grid; gap: 0.7rem; }
+.compare-slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+.compare-slot {
+  border: 1px solid var(--border); background: var(--gray7); padding: 0.7rem;
+  display: grid; gap: 0.5rem;
+}
+.compare-slot-title { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray3); }
+.compare-slot-status { font-family: var(--mono); font-size: 0.66rem; color: var(--gray2); line-height: 1.35; min-height: 34px; }
+.compare-slot input {
+  width: 100%; background: var(--white); border: 1px solid var(--border); color: var(--black);
+  padding: 0.42rem 0.5rem; border-radius: 3px; font-family: var(--mono); font-size: 0.7rem;
+}
+.compare-small-btn {
+  border: 1px solid var(--black); background: var(--white); color: var(--black); padding: 0.55rem 0.45rem;
+  font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+}
+.compare-small-btn:hover { background: var(--white); }
+.compare-summary { font-family: var(--mono); font-size: 0.68rem; color: var(--gray3); line-height: 1.45; }
 
 .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0; border-bottom: 1px solid var(--gray6); }
 .toggle-row:last-child { border-bottom: none; }
@@ -117,7 +210,7 @@ input:focus, select:focus { border-color: var(--black); }
 .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .sidebar-footer { padding: 1.25rem 1.5rem; border-top: 2px solid var(--black); }
 
-.main { padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+.main { min-width: 0; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
 
 .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 500px; color: var(--gray4); gap: 1rem; }
 .placeholder-title { font-family: var(--serif); font-size: 1.8rem; color: var(--gray5); }
@@ -131,7 +224,7 @@ input:focus, select:focus { border-color: var(--black); }
 .kpi-value.red { color: var(--red); }
 .kpi-value.gold { color: var(--gold); }
 
-.chart-card { background: var(--white); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.chart-card { min-width: 0; background: var(--white); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .chart-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
 .chart-title { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray3); }
 .chart-body { padding: 1.5rem; height: 320px; position: relative; }
@@ -142,6 +235,13 @@ input:focus, select:focus { border-color: var(--black); }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gray5); border-radius: 2px; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: relative; top: 0; height: auto; max-height: none; }
+  .sidebar-resizer { display: none; }
+  .main { padding: 1rem; }
+}
 </style>
 </head>
 <body>
@@ -151,11 +251,51 @@ input:focus, select:focus { border-color: var(--black); }
     <div class="logo">Backtesting Engine</div>
     <div class="logo-sub">Portfolio Simulation System</div>
   </div>
-  <div class="api-status"><span class="dot"></span>localhost:8000</div>
+  <div class="header-actions">
+    <a class="nav-link" href="dashboard.html">Dashboard</a>
+    <div class="api-status"><span class="dot"></span>localhost:8000</div>
+  </div>
 </header>
 
 <div class="layout">
 <aside class="sidebar">
+  <details class="agent-panel" open>
+    <summary><span>KI-Analyse Template</span><span>▾</span></summary>
+    <div class="agent-options">
+      <label class="agent-option">
+        <input type="checkbox" id="agent-management" checked>
+        <span>
+          <span class="agent-option-title">Management-Infos</span>
+          <span class="agent-option-sub">Fuehrungsteam und Unternehmensprofil abrufen</span>
+          <textarea id="agent-management-text" placeholder="z.B. CEO, CFO, Insider-Kaeufe, Management-Wechsel"></textarea>
+        </span>
+      </label>
+      <label class="agent-option">
+        <input type="checkbox" id="agent-balance" checked>
+        <span>
+          <span class="agent-option-title">Bilanz-Daten</span>
+          <span class="agent-option-sub">Balance Sheet Kennzahlen aus yfinance auswerten</span>
+          <textarea id="agent-balance-text" placeholder="z.B. ROE, ROCE, KGV, Verschuldung, Free Cashflow"></textarea>
+        </span>
+      </label>
+      <label class="agent-option">
+        <input type="checkbox" id="agent-industry" checked>
+        <span>
+          <span class="agent-option-title">Branchen-Analyse</span>
+          <span class="agent-option-sub">Sektor, Industrie und Bewertungs-KPIs einbeziehen</span>
+          <textarea id="agent-industry-text" placeholder="z.B. Wettbewerber, Margenvergleich, Marktanteil, Wachstum"></textarea>
+        </span>
+      </label>
+      <label class="agent-option">
+        <input type="checkbox" id="agent-moat" checked>
+        <span>
+          <span class="agent-option-title">Burggraben</span>
+          <span class="agent-option-sub">Wettbewerbsvorteile aus Kennzahlen ableiten</span>
+          <textarea id="agent-moat-text" placeholder="z.B. Marke, Netzwerkeffekt, Preissetzungsmacht, Switching Costs"></textarea>
+        </span>
+      </label>
+    </div>
+  </details>
 
   <!-- 01 Zeitraum -->
   <div class="accordion-item">
@@ -163,6 +303,7 @@ input:focus, select:focus { border-color: var(--black); }
       <span>01 — Zeitraum & Kapital</span><span class="accordion-arrow">▾</span>
     </button>
     <div class="accordion-body open">
+      <div class="field"><label>Backtest Name</label><input type="text" id="backtest-name" value="Mein Backtest" maxlength="120"></div>
       <div class="row2">
         <div class="field"><label>Startdatum</label><input type="date" id="startdatum" value="2014-04-01"></div>
         <div class="field"><label>Enddatum</label><input type="date" id="enddatum" value="2026-01-01"></div>
@@ -170,6 +311,24 @@ input:focus, select:focus { border-color: var(--black); }
       <div class="row2">
         <div class="field"><label>Startkapital (€)</label><input type="number" id="startkapital" value="20000"></div>
         <div class="field"><label>Sparplan Start (€)</label><input type="number" id="sp_start" value="500"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Sparplan Dynamisierung (%)</label><input type="number" id="sp-dynamisierung" value="10" min="0" step="0.1"></div>
+        <div class="field"><label>Sparplan Limit (EUR)</label><input type="number" id="sp-limit" value="2000" min="0"></div>
+      </div>
+      <div class="field">
+        <label>Basiswaehrung</label>
+        <div class="select-wrap">
+          <select id="basiswaehrung">
+            <option>EUR</option>
+            <option>USD</option>
+            <option>CHF</option>
+            <option>GBP</option>
+            <option>JPY</option>
+            <option>CAD</option>
+            <option>AUD</option>
+          </select>
+        </div>
       </div>
       <div class="field"><label>Rebalancing Intervall (Tage)</label><input type="number" id="intervall" value="362"></div>
     </div>
@@ -182,20 +341,23 @@ input:focus, select:focus { border-color: var(--black); }
     </button>
     <div class="accordion-body open">
       <table class="asset-table">
-        <thead><tr><th>Symbol</th><th>Name</th><th style="text-align:right">Anteil</th><th></th></tr></thead>
+        <thead><tr><th>Symbol</th><th>Name</th><th>Waehrung</th><th>Steuer</th><th style="text-align:right">Anteil</th><th></th></tr></thead>
         <tbody id="asset-tbody"></tbody>
       </table>
       <div class="total-bar">
         <span class="total-label">Gesamt</span>
         <span class="total-val err" id="total-val">0%</span>
       </div>
-      <div class="add-form">
-        <div class="row3">
+      <div class="add-form asset-add-form">
+        <div class="asset-add-grid">
           <div class="field"><label>Symbol</label><input type="text" id="new-sym" placeholder="AAPL" style="text-transform:uppercase"></div>
           <div class="field"><label>Name</label><input type="text" id="new-name" placeholder="Apple"></div>
+          <div class="field"><label>Waehrung</label><div class="select-wrap"><select id="new-currency"></select></div></div>
+          <div class="field"><label>Steuerart</label><div class="select-wrap"><select id="new-tax-type"></select></div></div>
           <div class="field"><label>Anteil %</label><input type="number" id="new-ant" placeholder="10" min="1" max="100"></div>
         </div>
-        <button class="run-btn" style="padding:0.55rem;font-size:0.68rem;margin-top:0.4rem;" onclick="addAsset()">+ ASSET HINZUFÜGEN</button>
+        <button class="run-btn" style="padding:0.5rem;font-size:0.64rem;margin-top:0.15rem;background:var(--gray2);" onclick="resolveNewTicker()">Ticker suchen</button>
+        <button class="run-btn" style="padding:0.55rem;font-size:0.68rem;margin-top:0.4rem;" onclick="addAsset()">Asset hinzufuegen</button>
       </div>
     </div>
   </div>
@@ -208,7 +370,7 @@ input:focus, select:focus { border-color: var(--black); }
     <div class="accordion-body open">
       <div class="toggle-row">
         <div><div class="toggle-label">Stop Loss</div><div class="toggle-sub">Verkauf bei −15% vom Peak</div></div>
-        <div class="switch" id="sw-Stop_Loss" onclick="toggleSw(this)"></div>
+        <div class="switch" id="sw-Stop_Loss" onclick="toggleSw(this,'acc-stoploss')"></div>
       </div>
       <div class="toggle-row">
         <div><div class="toggle-label">Rebalancing</div><div class="toggle-sub">Anteile periodisch anpassen</div></div>
@@ -229,6 +391,66 @@ input:focus, select:focus { border-color: var(--black); }
       <div class="toggle-row">
         <div><div class="toggle-label">Schwellwert-Umschichtung</div><div class="toggle-sub">Bei Zielwert umschichten</div></div>
         <div class="switch" id="sw-schwellwert" onclick="toggleSw(this,'acc-schwellwert')"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item" id="acc-stoploss" style="display:none;">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>04 â€” Stop Loss Konfiguration</span><span class="accordion-arrow">â–¾</span>
+    </button>
+    <div class="accordion-body open">
+      <div class="row2">
+        <div class="field"><label>Ausstieg ab Drawdown (%)</label><input type="number" id="stop-ausstieg" value="15" min="0" max="100" step="0.1"></div>
+        <div class="field"><label>Wiedereinstieg ueber Verkauf (%)</label><input type="number" id="stop-wiedereinstieg" value="0" min="0" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>04 - Kosten & Steuern</span><span class="accordion-arrow">v</span>
+    </button>
+    <div class="accordion-body open">
+      <input type="checkbox" id="costs-active" checked style="display:none;">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Transaktionskosten</div><div class="toggle-sub">Gebuehren auf Kauf, Verkauf und Rebalancing</div></div>
+        <div class="switch on" id="sw-costs-active" onclick="toggleCheckboxSwitch(this,'costs-active','costs-config')"></div>
+      </div>
+      <div id="costs-config">
+        <div class="row2">
+          <div class="field"><label>Fix je Order</label><input type="number" id="cost-fixed" value="1" min="0" step="0.01"></div>
+          <div class="field"><label>Prozent je Order</label><input type="number" id="cost-percent" value="0.1" min="0" step="0.01"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Mindestgebuehr</label><input type="number" id="cost-min" value="0" min="0" step="0.01"></div>
+          <div class="field"><label>Maximalgebuehr</label><input type="number" id="cost-max" value="0" min="0" step="0.01"></div>
+        </div>
+      </div>
+      <input type="checkbox" id="tax-active" checked style="display:none;">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Deutsche Kapitalertragsteuer</div><div class="toggle-sub">Einkommen, Freibetrag, Soli und Verlusttoepfe</div></div>
+        <div class="switch on" id="sw-tax-active" onclick="toggleCheckboxSwitch(this,'tax-active','tax-config')"></div>
+      </div>
+      <div id="tax-config">
+        <div class="row2">
+          <div class="field"><label>Jahreseinkommen</label><input type="number" id="tax-income" value="45000" min="0" step="100" oninput="updateDerivedTaxRate()"></div>
+          <div class="field"><label>Sparer-Pauschbetrag</label><input type="number" id="tax-allowance" value="1000" min="0" step="1"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Pers. Grenzsteuer %</label><input type="number" id="tax-personal-rate" value="0" readonly></div>
+          <div class="field"><label>Kapitalsteuer %</label><input type="number" id="tax-rate" value="25" min="0" max="100" step="0.01" readonly></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Soli % auf Steuer</label><input type="number" id="tax-soli" value="5.5" min="0" max="100" step="0.01"></div>
+          <div class="field"><label>Kirchensteuer %</label><input type="number" id="tax-church" value="0" min="0" max="20" step="0.01"></div>
+        </div>
+        <input type="checkbox" id="tax-loss-harvesting" style="display:none;">
+        <div class="toggle-row">
+          <div><div class="toggle-label">Tax-Loss-Harvesting</div><div class="toggle-sub">Verlustpositionen am Jahresende verkaufen und direkt zurueckkaufen</div></div>
+          <div class="switch" id="sw-tax-loss-harvesting" onclick="toggleCheckboxSwitch(this,'tax-loss-harvesting','tax-harvest-config')"></div>
+        </div>
+        <div class="field" id="tax-harvest-config" style="display:none;"><label>Harvesting ab Verlust (%)</label><input type="number" id="tax-harvest-threshold" value="5" min="0" max="100" step="0.1"></div>
       </div>
     </div>
   </div>
@@ -259,11 +481,47 @@ input:focus, select:focus { border-color: var(--black); }
     </div>
   </div>
 
+  <div class="accordion-item">
+    <button class="accordion-header open" onclick="toggleAcc(this)">
+      <span>06 - Backtest Vergleich</span><span class="accordion-arrow">v</span>
+    </button>
+    <div class="accordion-body open">
+      <div class="compare-panel">
+        <div class="compare-summary">Aktuelle Konfiguration als A speichern, dann Einstellungen aendern und als B speichern.</div>
+        <div class="compare-slot-grid">
+          <div class="compare-slot">
+            <div class="compare-slot-title">Portfolio A</div>
+            <input type="text" id="compare-a-name" placeholder="Name A" maxlength="120">
+            <div class="compare-slot-status" id="compare-a-status">Noch leer</div>
+            <button class="compare-small-btn" onclick="storeCompareSlot('a')">Als A merken</button>
+          </div>
+          <div class="compare-slot">
+            <div class="compare-slot-title">Portfolio B</div>
+            <input type="text" id="compare-b-name" placeholder="Name B" maxlength="120">
+            <div class="compare-slot-status" id="compare-b-status">Noch leer</div>
+            <button class="compare-small-btn" onclick="storeCompareSlot('b')">Als B merken</button>
+          </div>
+        </div>
+        <button class="run-btn" id="compare-run-btn" onclick="runBacktestComparison()">Vergleich starten</button>
+      </div>
+    </div>
+  </div>
+
   <div class="sidebar-footer">
     <button class="run-btn" id="run-btn" onclick="runSimulation()">▶ SIMULATION STARTEN</button>
   </div>
 
 </aside>
+
+<div
+  class="sidebar-resizer"
+  id="sidebar-resizer"
+  role="separator"
+  aria-orientation="vertical"
+  aria-label="Regelbereich Breite aendern"
+  tabindex="0"
+  title="Regelbereich ziehen"
+></div>
 
 <main class="main" id="main">
   <div class="placeholder">
@@ -273,21 +531,41 @@ input:focus, select:focus { border-color: var(--black); }
 </main>
 </div>
 
+<div class="agent-tooltip" id="agent-tooltip" onmouseenter="keepAgentTooltip()" onmouseleave="scheduleAgentTooltipClose()">
+  <div class="agent-tooltip-head">
+    <div>
+      <div class="agent-tooltip-title" id="agent-tooltip-title">KI-Analyse</div>
+      <div class="agent-tooltip-symbol" id="agent-tooltip-symbol"></div>
+    </div>
+    <button class="agent-close" onclick="hideAgentTooltip()">×</button>
+  </div>
+  <button class="agent-run-btn" id="agent-run-btn" onclick="startAgentAnalysis()">KI-Bericht</button>
+  <div class="agent-result" id="agent-result">
+    <span class="agent-muted">Template oben anpassen und Analyse starten.</span>
+  </div>
+</div>
+
 <script>
-const API = 'http://localhost:8000';
+const API = window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:8000';
 let charts = {};
+let activeAgentAsset = null;
+let agentCloseTimer = null;
+const SIDEBAR_WIDTH_KEY = 'backtestSidebarWidth';
+const SIDEBAR_DEFAULT_WIDTH = 380;
+const SIDEBAR_MIN_WIDTH = 300;
+let compareSlots = { a: null, b: null };
 
 let assets = [
-  { name:"Philip Morris",  symbol:"PM",     anteil:17, regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":20,MDT:10,META:15,GOOGL:15,MA:15,AMZN:15 }}},
-  { name:"Procter Gamble", symbol:"PG",     anteil:17, regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":10,MDT:10,META:25,GOOGL:15,MA:15,AMZN:15 }}},
-  { name:"Coca Cola",      symbol:"KO",     anteil:16, regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":10,MDT:10,META:25,GOOGL:15,MA:15,AMZN:15 }}},
-  { name:"Lockheed",       symbol:"LMT",    anteil:5,  regeln:{}},
-  { name:"Rheinmetall",    symbol:"RHM.DE", anteil:10, regeln:{}},
-  { name:"Medtronic",      symbol:"MDT",    anteil:5,  regeln:{}},
-  { name:"Meta",           symbol:"META",   anteil:8,  regeln:{}},
-  { name:"Google",         symbol:"GOOGL",  anteil:7,  regeln:{}},
-  { name:"Mastercard",     symbol:"MA",     anteil:8,  regeln:{}},
-  { name:"Amazon",         symbol:"AMZN",   anteil:7,  regeln:{}},
+  { name:"Philip Morris",  symbol:"PM",     anteil:17, waehrung:"AUTO", steuer_typ:"aktie", regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":20,MDT:10,META:15,GOOGL:15,MA:15,AMZN:15 }}},
+  { name:"Procter Gamble", symbol:"PG",     anteil:17, waehrung:"AUTO", steuer_typ:"aktie", regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":10,MDT:10,META:25,GOOGL:15,MA:15,AMZN:15 }}},
+  { name:"Coca Cola",      symbol:"KO",     anteil:16, waehrung:"AUTO", steuer_typ:"aktie", regeln:{ dividenden_ziel:{ LMT:10,"RHM.DE":10,MDT:10,META:25,GOOGL:15,MA:15,AMZN:15 }}},
+  { name:"Lockheed",       symbol:"LMT",    anteil:5,  waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
+  { name:"Rheinmetall",    symbol:"RHM.DE", anteil:10, waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
+  { name:"Medtronic",      symbol:"MDT",    anteil:5,  waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
+  { name:"Meta",           symbol:"META",   anteil:8,  waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
+  { name:"Google",         symbol:"GOOGL",  anteil:7,  waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
+  { name:"Mastercard",     symbol:"MA",     anteil:8,  waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
+  { name:"Amazon",         symbol:"AMZN",   anteil:7,  waehrung:"AUTO", steuer_typ:"aktie", regeln:{}},
 ];
 
 function toggleAcc(btn) {
@@ -302,12 +580,286 @@ function toggleSw(el, accId) {
   }
 }
 
+function toggleCheckboxSwitch(el, checkboxId, targetId) {
+  el.classList.toggle('on');
+  const input = document.getElementById(checkboxId);
+  input.checked = el.classList.contains('on');
+  if (targetId) {
+    document.getElementById(targetId).style.display = input.checked ? 'block' : 'none';
+  }
+}
+
+function estimatePersonalTaxRate(income) {
+  const value = Math.max(Number(income) || 0, 0);
+  if (value <= 12096) return 0;
+  if (value <= 17443) return 14 + ((value - 12096) / (17443 - 12096)) * 10;
+  if (value <= 68480) return 24 + ((value - 17443) / (68480 - 17443)) * 18;
+  if (value <= 277825) return 42;
+  return 45;
+}
+
+function updateDerivedTaxRate() {
+  const personal = estimatePersonalTaxRate(document.getElementById('tax-income').value);
+  const capital = Math.min(25, personal);
+  document.getElementById('tax-personal-rate').value = personal.toFixed(2);
+  document.getElementById('tax-rate').value = capital.toFixed(2);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value || ''), window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch(e) {
+    return '';
+  }
+}
+
+function sidebarMaxWidth() {
+  return Math.min(720, Math.max(SIDEBAR_MIN_WIDTH, window.innerWidth - 420));
+}
+
+function clampSidebarWidth(width) {
+  return Math.round(Math.min(Math.max(Number(width) || SIDEBAR_DEFAULT_WIDTH, SIDEBAR_MIN_WIDTH), sidebarMaxWidth()));
+}
+
+function resizeChartsSoon() {
+  requestAnimationFrame(() => {
+    Object.values(charts).forEach(chart => {
+      if (chart && typeof chart.resize === 'function') chart.resize();
+    });
+  });
+}
+
+function setSidebarWidth(width, persist=true) {
+  const next = clampSidebarWidth(width);
+  document.documentElement.style.setProperty('--sidebar-width', `${next}px`);
+  if (persist) {
+    try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next)); } catch(e) {}
+  }
+  resizeChartsSoon();
+}
+
+function initSidebarResize() {
+  const layout = document.querySelector('.layout');
+  const resizer = document.getElementById('sidebar-resizer');
+  if (!layout || !resizer) return;
+
+  let dragging = false;
+  const saved = parseFloat(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+  if (saved) setSidebarWidth(saved, false);
+
+  const widthFromPointer = event => event.clientX - layout.getBoundingClientRect().left;
+
+  resizer.addEventListener('pointerdown', event => {
+    if (window.innerWidth <= 860) return;
+    dragging = true;
+    document.body.classList.add('resizing-sidebar');
+    resizer.setPointerCapture(event.pointerId);
+    setSidebarWidth(widthFromPointer(event));
+  });
+
+  resizer.addEventListener('pointermove', event => {
+    if (!dragging) return;
+    setSidebarWidth(widthFromPointer(event));
+  });
+
+  const stopDragging = event => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove('resizing-sidebar');
+    if (resizer.hasPointerCapture(event.pointerId)) resizer.releasePointerCapture(event.pointerId);
+  };
+
+  resizer.addEventListener('pointerup', stopDragging);
+  resizer.addEventListener('pointercancel', stopDragging);
+  resizer.addEventListener('dblclick', () => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH));
+  resizer.addEventListener('keydown', event => {
+    const current = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || SIDEBAR_DEFAULT_WIDTH;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setSidebarWidth(current - 24);
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setSidebarWidth(current + 24);
+    }
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setSidebarWidth(SIDEBAR_MIN_WIDTH);
+    }
+    if (event.key === 'End') {
+      event.preventDefault();
+      setSidebarWidth(sidebarMaxWidth());
+    }
+  });
+
+  window.addEventListener('resize', () => setSidebarWidth(
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width')) || SIDEBAR_DEFAULT_WIDTH,
+    false
+  ));
+}
+
+function getAgentTemplate() {
+  return {
+    management: document.getElementById('agent-management').checked,
+    balance_sheet: document.getElementById('agent-balance').checked,
+    industry_analysis: document.getElementById('agent-industry').checked,
+    moat: document.getElementById('agent-moat').checked,
+  };
+}
+
+function getAgentInstructions() {
+  return {
+    management: document.getElementById('agent-management-text').value.trim(),
+    balance_sheet: document.getElementById('agent-balance-text').value.trim(),
+    industry_analysis: document.getElementById('agent-industry-text').value.trim(),
+    moat: document.getElementById('agent-moat-text').value.trim(),
+  };
+}
+
+function currencyOptions(selected='AUTO') {
+  const currencies = ['AUTO','EUR','USD','CHF','GBP','GBp','JPY','CAD','AUD'];
+  return currencies.map(c => `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`).join('');
+}
+
+function updateAssetCurrency(idx, value) {
+  assets[idx].waehrung = value;
+}
+
+function taxTypeOptions(selected='aktie') {
+  const types = [
+    ['aktie','Aktie'],
+    ['fonds_etf','ETF/Fonds'],
+    ['crypto','Crypto'],
+    ['sonstige','Sonstige']
+  ];
+  return types.map(([value,label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`).join('');
+}
+
+function updateAssetTaxType(idx, value) {
+  assets[idx].steuer_typ = value;
+}
+
+function checked(id) {
+  return document.getElementById(id).checked;
+}
+
+async function resolveNewTicker() {
+  const input = document.getElementById('new-sym');
+  const query = input.value.trim();
+  if (!query) return;
+  try {
+    const res = await fetch(`${API}/ticker/resolve?q=${encodeURIComponent(query)}&market=AUTO`);
+    const data = await res.json();
+    if (!res.ok || !data.candidates?.length) return;
+    const best = data.candidates[0];
+    input.value = best.symbol;
+    document.getElementById('new-name').value = best.name || best.symbol;
+    document.getElementById('new-currency').value = best.waehrung || 'AUTO';
+    document.getElementById('new-tax-type').value = best.steuer_typ || 'aktie';
+  } catch(e) {
+    console.warn('Ticker-Aufloesung fehlgeschlagen', e);
+  }
+}
+
+function showAgentTooltip(event, idx) {
+  keepAgentTooltip();
+  activeAgentAsset = assets[idx];
+  const tip = document.getElementById('agent-tooltip');
+  document.getElementById('agent-tooltip-title').textContent = activeAgentAsset.name;
+  document.getElementById('agent-tooltip-symbol').textContent = activeAgentAsset.symbol;
+  document.getElementById('agent-result').innerHTML = '<span class="agent-muted">Template oben anpassen und Analyse starten.</span>';
+  document.getElementById('agent-run-btn').disabled = false;
+  document.getElementById('agent-run-btn').textContent = 'KI-Bericht';
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const top = Math.min(rect.top, window.innerHeight - 250);
+  const left = Math.min(rect.right + 10, window.innerWidth - 342);
+  tip.style.top = `${Math.max(12, top)}px`;
+  tip.style.left = `${Math.max(12, left)}px`;
+  tip.classList.add('open');
+}
+
+function keepAgentTooltip() {
+  if (agentCloseTimer) clearTimeout(agentCloseTimer);
+}
+
+function scheduleAgentTooltipClose() {
+  agentCloseTimer = setTimeout(hideAgentTooltip, 220);
+}
+
+function hideAgentTooltip() {
+  document.getElementById('agent-tooltip').classList.remove('open');
+}
+
+async function startAgentAnalysis() {
+  if (!activeAgentAsset) return;
+  const btn = document.getElementById('agent-run-btn');
+  const result = document.getElementById('agent-result');
+  btn.disabled = true;
+  btn.textContent = 'Analyse laeuft...';
+  result.innerHTML = '<span class="agent-muted">yfinance-Daten werden geladen und ausgewertet.</span>';
+
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Bitte einloggen, um den KI-Agenten zu starten.');
+    const res = await fetch(`${API}/agent/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', Authorization: `Bearer ${token}`},
+      body: JSON.stringify({
+        symbol: activeAgentAsset.symbol,
+        name: activeAgentAsset.name,
+        template: getAgentTemplate(),
+        instructions: getAgentInstructions(),
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `API Fehler ${res.status}`);
+    renderAgentResult(data);
+  } catch (e) {
+    result.innerHTML = `<div class="error-box">${escapeHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'KI-Bericht';
+  }
+}
+
+function renderAgentResult(data) {
+  const sections = data.sections || [];
+  const sectionHtml = sections.map(section => {
+    const items = section.items || [];
+    const list = items.map(item => {
+      const label = item.label || item.title || item.name || item.metric || item.signal || 'Info';
+      const value = item.value || item.content || item.title || item.source || item.role || '';
+      const meta = item.source_type ? `<span class="agent-muted"> ${escapeHtml(item.source_type)}</span>` : '';
+      const href = safeUrl(item.url);
+      const url = href ? ` <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">Quelle</a>` : '';
+      return `<li><strong>${escapeHtml(label)}</strong>${value ? `: ${escapeHtml(value)}` : ''}${meta}${url}</li>`;
+    }).join('');
+    const focus = section.requested_focus ? `<p class="agent-muted">Fokus: ${escapeHtml(section.requested_focus)}</p>` : '';
+    const query = section.search_query ? `<p class="agent-muted">Suche: ${escapeHtml(section.search_query)}</p>` : '';
+    return `<h4>${escapeHtml(section.title)}</h4>${focus}${query}<p>${escapeHtml(section.summary || '')}</p>${list ? `<ul>${list}</ul>` : ''}`;
+  }).join('');
+
+  document.getElementById('agent-result').innerHTML = `
+    <p>${escapeHtml(data.summary || '')}</p>
+    ${sectionHtml}
+    <p class="agent-muted">Quelle: ${escapeHtml(data.data_source || 'yfinance')}</p>
+  `;
+}
+
 function renderAssets() {
   const tbody = document.getElementById('asset-tbody');
   tbody.innerHTML = assets.map((a,i) => `
-    <tr>
-      <td><span class="symbol-badge">${a.symbol}</span></td>
-      <td style="font-size:0.74rem;color:var(--gray2);">${a.name}</td>
+    <tr class="asset-row" onmouseenter="showAgentTooltip(event, ${i})" onmouseleave="scheduleAgentTooltipClose()">
+      <td><span class="symbol-badge">${escapeHtml(a.symbol)}</span></td>
+      <td style="font-size:0.74rem;color:var(--gray2);">${escapeHtml(a.name)}</td>
+      <td><select class="mini-select" onchange="updateAssetCurrency(${i}, this.value)">${currencyOptions(a.waehrung || 'AUTO')}</select></td>
+      <td><select class="mini-select" onchange="updateAssetTaxType(${i}, this.value)">${taxTypeOptions(a.steuer_typ || 'aktie')}</select></td>
       <td style="font-family:var(--mono);font-size:0.74rem;text-align:right;color:var(--gray2);">${a.anteil}%</td>
       <td><button class="remove-btn" onclick="removeAsset(${i})">×</button></td>
     </tr>`).join('');
@@ -331,8 +883,10 @@ function addAsset() {
   const sym = document.getElementById('new-sym').value.toUpperCase().trim();
   const name = document.getElementById('new-name').value.trim() || sym;
   const ant = parseInt(document.getElementById('new-ant').value);
+  const waehrung = document.getElementById('new-currency').value || 'AUTO';
+  const steuer_typ = document.getElementById('new-tax-type').value || 'aktie';
   if (!sym || !ant) return;
-  assets.push({ name, symbol: sym, anteil: ant, regeln: {} });
+  assets.push({ name, symbol: sym, anteil: ant, waehrung, steuer_typ, regeln: {} });
   document.getElementById('new-sym').value = '';
   document.getElementById('new-name').value = '';
   document.getElementById('new-ant').value = '';
@@ -381,56 +935,270 @@ function getRegeln() {
     .filter(r => document.getElementById(`sw-${r}`)?.classList.contains('on'));
 }
 
-async function runSimulation() {
-  const btn = document.getElementById('run-btn');
-  btn.disabled = true; btn.textContent = '⟳ SIMULATION LÄUFT...';
+function cloneData(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
+function validatePortfolioWeights() {
   const total = assets.reduce((s,a) => s+a.anteil, 0);
-  if (total !== 100) { showError(`Anteile ergeben ${total}% — muss 100% sein.`); resetBtn(btn); return; }
+  if (total !== 100) {
+    throw new Error(`Anteile ergeben ${total}% - muss 100% sein.`);
+  }
+}
 
-  const config = {
+function buildSimulationConfig() {
+  validatePortfolioWeights();
+  const rawName = document.getElementById('backtest-name').value.trim();
+  return {
+    name: rawName || 'Backtest',
     startkapital: parseFloat(document.getElementById('startkapital').value),
     startdatum: document.getElementById('startdatum').value,
     enddatum: document.getElementById('enddatum').value,
+    basiswaehrung: document.getElementById('basiswaehrung').value,
     intervall: parseInt(document.getElementById('intervall').value),
     sp_start: parseFloat(document.getElementById('sp_start').value),
+    sparplan_dynamisierung: parseFloat(document.getElementById('sp-dynamisierung').value),
+    sparplan_limit: parseFloat(document.getElementById('sp-limit').value),
     aktive_regeln: getRegeln(),
-    assets: assets.map(a => ({ name:a.name, symbol:a.symbol, anteil:a.anteil, regeln:a.regeln })),
+    assets: cloneData(assets.map(a => ({
+      name:a.name,
+      symbol:a.symbol,
+      anteil:a.anteil,
+      waehrung:a.waehrung || 'AUTO',
+      steuer_typ:a.steuer_typ || 'aktie',
+      regeln:a.regeln || {}
+    }))),
     schwellwert_config: {
       schwelle: parseFloat(document.getElementById('sw-schwelle').value),
       von: document.getElementById('sw-von').value,
       zu: document.getElementById('sw-zu').value,
       prozent: parseFloat(document.getElementById('sw-prozent').value),
+    },
+    stop_loss_config: {
+      ausstieg_prozent: parseFloat(document.getElementById('stop-ausstieg').value),
+      wiedereinstieg_prozent: parseFloat(document.getElementById('stop-wiedereinstieg').value),
+    },
+    transaktionskosten_config: {
+      aktiv: checked('costs-active'),
+      ordergebuehr_fix: parseFloat(document.getElementById('cost-fixed').value),
+      ordergebuehr_prozent: parseFloat(document.getElementById('cost-percent').value),
+      mindestgebuehr: parseFloat(document.getElementById('cost-min').value),
+      maximalgebuehr: parseFloat(document.getElementById('cost-max').value),
+    },
+    steuer_config: {
+      aktiv: checked('tax-active'),
+      land: 'DE',
+      jahreseinkommen: parseFloat(document.getElementById('tax-income').value),
+      automatisch_aus_einkommen: true,
+      sparer_pauschbetrag: parseFloat(document.getElementById('tax-allowance').value),
+      kapitalertragsteuer: parseFloat(document.getElementById('tax-rate').value),
+      solidaritaetszuschlag: parseFloat(document.getElementById('tax-soli').value),
+      kirchensteuer: parseFloat(document.getElementById('tax-church').value),
+      tax_loss_harvesting: checked('tax-loss-harvesting'),
+      harvesting_schwelle_prozent: parseFloat(document.getElementById('tax-harvest-threshold').value),
     }
   };
+}
 
+async function postSimulationConfig(config) {
+  const token = localStorage.getItem('token');
+  const endpoint = token ? '/simuliere' : '/simuliere/public';
+  const headers = {'Content-Type':'application/json'};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res = await fetch(`${API}${endpoint}`, { method:'POST', headers, body: JSON.stringify(config) });
+  if (res.status === 401 && token) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    res = await fetch(`${API}/simuliere/public`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(config)
+    });
+  }
+  if (!res.ok) throw new Error(`API Fehler ${res.status}`);
+  const data = await res.json();
+  if (data.fehler) throw new Error(data.fehler);
+  return data;
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(chart => {
+    if (chart && typeof chart.destroy === 'function') chart.destroy();
+  });
+  charts = {};
+}
+
+function compareLabel(config) {
+  const symbols = config.assets.slice(0, 3).map(a => a.symbol).join(', ');
+  const suffix = config.assets.length > 3 ? ` +${config.assets.length - 3}` : '';
+  return `${config.name || 'Backtest'} | ${symbols}${suffix} | ${config.startdatum} bis ${config.enddatum}`;
+}
+
+function updateCompareStatus() {
+  ['a','b'].forEach(slot => {
+    const el = document.getElementById(`compare-${slot}-status`);
+    if (!el) return;
+    el.textContent = compareSlots[slot]?.label || 'Noch leer';
+  });
+}
+
+function storeCompareSlot(slot) {
   try {
-    const res = await fetch(`${API}/simuliere`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(config) });
-    if (!res.ok) throw new Error(`API Fehler ${res.status}`);
-    const data = await res.json();
-    if (data.fehler) throw new Error(data.fehler);
+    const config = buildSimulationConfig();
+    const slotNameInput = document.getElementById(`compare-${slot}-name`);
+    const slotName = slotNameInput?.value.trim();
+    if (slotName) config.name = slotName;
+    else if (slotNameInput) slotNameInput.value = config.name;
+    compareSlots[slot] = { label: compareLabel(config), config: cloneData(config) };
+    updateCompareStatus();
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+async function runSimulation() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.textContent = 'Simulation laeuft...';
+  try {
+    const config = buildSimulationConfig();
+    const data = await postSimulationConfig(config);
     renderErgebnis(data);
   } catch(e) { showError(e.message); }
   resetBtn(btn);
 }
 
-function resetBtn(btn) { btn.disabled=false; btn.textContent='▶ SIMULATION STARTEN'; }
+function resetBtn(btn) { btn.disabled=false; btn.textContent='Simulation starten'; }
+
+async function runBacktestComparison() {
+  const btn = document.getElementById('compare-run-btn');
+  if (!compareSlots.a || !compareSlots.b) {
+    showError('Bitte erst Portfolio A und Portfolio B merken.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Vergleich laeuft...';
+  try {
+    const resultA = await postSimulationConfig(compareSlots.a.config);
+    const resultB = await postSimulationConfig(compareSlots.b.config);
+    renderComparisonResult(compareSlots.a, resultA, compareSlots.b, resultB);
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Vergleich starten';
+  }
+}
+
+function historyLabels(data) {
+  return Object.keys(data.historie?.Gesamtwert || {}).map(d => d.slice(0,10));
+}
+
+function historyLookup(data) {
+  return new Map(Object.entries(data.historie?.Gesamtwert || {}).map(([date, value]) => [date.slice(0,10), Number(value)]));
+}
+
+function alignedHistory(labels, data) {
+  const lookup = historyLookup(data);
+  return labels.map(label => lookup.has(label) ? lookup.get(label) : null);
+}
+
+function normalizedHistory(labels, data) {
+  const values = alignedHistory(labels, data);
+  const first = values.find(value => value !== null && Number.isFinite(value)) || 0;
+  return values.map(value => value === null || !first ? null : ((value / first) - 1) * 100);
+}
+
+function renderComparisonResult(slotA, dataA, slotB, dataB) {
+  destroyCharts();
+  const main = document.getElementById('main');
+  const currencyA = dataA.basiswaehrung || slotA.config.basiswaehrung || 'EUR';
+  const currencyB = dataB.basiswaehrung || slotB.config.basiswaehrung || 'EUR';
+  const sameCurrency = currencyA === currencyB;
+  const diffValue = sameCurrency ? Number(dataA.gesamtwert || 0) - Number(dataB.gesamtwert || 0) : null;
+  const diffReturn = Number(dataA.gesamt_rendite || 0) - Number(dataB.gesamt_rendite || 0);
+  const diffValueText = diffValue === null ? 'FX' : `${diffValue >= 0 ? '+' : ''}${money(diffValue, currencyA)}`;
+  const diffReturnText = `${diffReturn >= 0 ? '+' : ''}${diffReturn.toFixed(1)} pp`;
+  const nameA = slotA.config.name || 'Portfolio A';
+  const nameB = slotB.config.name || 'Portfolio B';
+
+  main.innerHTML = `
+    <div class="chart-card">
+      <div class="chart-header"><span class="chart-title">Backtest Vergleich</span></div>
+      <div class="error-box" style="background:#fff;border-color:var(--border);color:var(--gray3);">
+        ${escapeHtml(nameA)} gegen ${escapeHtml(nameB)}
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">A Depot-Wert</div><div class="kpi-value">${money(dataA.gesamtwert, currencyA)}</div></div>
+      <div class="kpi"><div class="kpi-label">B Depot-Wert</div><div class="kpi-value">${money(dataB.gesamtwert, currencyB)}</div></div>
+      <div class="kpi"><div class="kpi-label">Wert Differenz</div><div class="kpi-value ${diffValue === null || diffValue >= 0 ? 'green' : 'red'}">${diffValueText}</div></div>
+      <div class="kpi"><div class="kpi-label">Rendite Differenz</div><div class="kpi-value ${diffReturn >= 0 ? 'green' : 'red'}">${diffReturnText}</div></div>
+      <div class="kpi"><div class="kpi-label">A Rendite</div><div class="kpi-value ${dataA.gesamt_rendite >= 0 ? 'green' : 'red'}">${dataA.gesamt_rendite.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">B Rendite</div><div class="kpi-value ${dataB.gesamt_rendite >= 0 ? 'green' : 'red'}">${dataB.gesamt_rendite.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">A Sharpe</div><div class="kpi-value gold">${dataA.sharpe_ratio.toFixed(2)}</div></div>
+      <div class="kpi"><div class="kpi-label">B Sharpe</div><div class="kpi-value gold">${dataB.sharpe_ratio.toFixed(2)}</div></div>
+    </div>
+    ${sameCurrency ? '' : '<div class="error-box">Die Basiswaehrungen unterscheiden sich. Absolute Werte werden angezeigt, aber die Wert-Differenz wird nicht verrechnet.</div>'}
+    <div class="chart-card">
+      <div class="chart-header"><span class="chart-title">Depotwert Vergleich</span></div>
+      <div class="chart-body"><canvas id="chart-compare-value"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header"><span class="chart-title">Rendite Vergleich normalisiert</span></div>
+      <div class="chart-body-sm"><canvas id="chart-compare-return"></canvas></div>
+    </div>
+    <div class="error-box" style="background:#fff;border-color:var(--border);color:var(--gray3);">
+      A: ${escapeHtml(slotA.label)}<br>B: ${escapeHtml(slotB.label)}
+    </div>
+  `;
+
+  const labels = Array.from(new Set([...historyLabels(dataA), ...historyLabels(dataB)])).sort();
+  charts.compareValue = new Chart(document.getElementById('chart-compare-value'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:nameA, data:alignedHistory(labels, dataA), borderColor:'#1a1a1a', fill:false, tension:0.3, pointRadius:0, borderWidth:2 },
+      { label:nameB, data:alignedHistory(labels, dataB), borderColor:'#1a6644', fill:false, tension:0.3, pointRadius:0, borderWidth:2 }
+    ]},
+    options: mkOpts(sameCurrency ? currencyA : '')
+  });
+
+  charts.compareReturn = new Chart(document.getElementById('chart-compare-return'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:`${nameA} Rendite %`, data:normalizedHistory(labels, dataA), borderColor:'#1a1a1a', fill:false, tension:0.3, pointRadius:0, borderWidth:2 },
+      { label:`${nameB} Rendite %`, data:normalizedHistory(labels, dataB), borderColor:'#1a6644', fill:false, tension:0.3, pointRadius:0, borderWidth:2 }
+    ]},
+    options: mkPercentOpts()
+  });
+}
 
 function renderErgebnis(data) {
   const main = document.getElementById('main');
+  destroyCharts();
+  const backtestName = document.getElementById('backtest-name').value.trim() || 'Backtest';
+  const currency = data.basiswaehrung || document.getElementById('basiswaehrung').value || 'EUR';
+  const steuer = data.steuer_report || {};
   const gPos = data.gewinn >= 0;
+  const annualPos = data.jaehrliche_rendite >= 0;
   const labels = Object.keys(data.historie['Gesamtwert']).map(d => d.slice(0,10));
   const gesamtVals = Object.values(data.historie['Gesamtwert']);
 
   main.innerHTML = `
+    <div class="chart-card">
+      <div class="chart-header"><span class="chart-title">${escapeHtml(backtestName)}</span></div>
+    </div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-label">Depot-Wert</div><div class="kpi-value">${fmt(data.gesamtwert)}€</div></div>
-      <div class="kpi"><div class="kpi-label">Eingezahlt</div><div class="kpi-value">${fmt(data.gesamt_eingezahlt)}€</div></div>
-      <div class="kpi"><div class="kpi-label">Gewinn</div><div class="kpi-value ${gPos?'green':'red'}">${gPos?'+':''}${fmt(data.gewinn)}€</div></div>
+      <div class="kpi"><div class="kpi-label">Depot-Wert</div><div class="kpi-value">${money(data.gesamtwert, currency)}</div></div>
+      <div class="kpi"><div class="kpi-label">Eingezahlt</div><div class="kpi-value">${money(data.gesamt_eingezahlt, currency)}</div></div>
+      <div class="kpi"><div class="kpi-label">Gewinn</div><div class="kpi-value ${gPos?'green':'red'}">${gPos?'+':''}${money(data.gewinn, currency)}</div></div>
       <div class="kpi"><div class="kpi-label">Gesamtrendite</div><div class="kpi-value ${gPos?'green':'red'}">${gPos?'+':''}${data.gesamt_rendite.toFixed(1)}%</div></div>
-      <div class="kpi"><div class="kpi-label">Ø Jährlich</div><div class="kpi-value green">+${data.jaehrliche_rendite.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">Jaehrlich</div><div class="kpi-value ${annualPos?'green':'red'}">${annualPos?'+':''}${data.jaehrliche_rendite.toFixed(1)}%</div></div>
       <div class="kpi"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value gold">${data.sharpe_ratio.toFixed(2)}</div></div>
-      <div class="kpi"><div class="kpi-label">Volatilität</div><div class="kpi-value">${data.volatilitaet.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">Volatilitaet</div><div class="kpi-value">${data.volatilitaet.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="kpi-label">Steuern</div><div class="kpi-value red">${money(steuer.steuern_gezahlt || 0, currency)}</div></div>
+      <div class="kpi"><div class="kpi-label">Orderkosten</div><div class="kpi-value">${money(steuer.transaktionskosten || 0, currency)}</div></div>
+      <div class="kpi"><div class="kpi-label">Verlusttopf</div><div class="kpi-value gold">${money((steuer.verlusttopf_aktien || 0) + (steuer.verlusttopf_allgemein || 0), currency)}</div></div>
     </div>
     <div class="chart-card">
       <div class="chart-header"><span class="chart-title">Gesamtportfolio</span></div>
@@ -450,7 +1218,7 @@ function renderErgebnis(data) {
       { label:'Portfolio', data:gesamtVals, borderColor:'#1a1a1a', backgroundColor:'rgba(0,0,0,0.04)', fill:true, tension:0.3, pointRadius:0, borderWidth:2 },
       { label:'Eingezahlt', data:eingezahlt, borderColor:'#999', borderDash:[5,4], fill:false, pointRadius:0, borderWidth:1.2 }
     ]},
-    options: mkOpts()
+    options: mkOpts(currency)
   });
 
   const colors = ['#1a6644','#8b1a1a','#8b6914','#1a3a6b','#4a1a6b','#1a5a6b','#6b4a1a','#1a6b4a','#6b1a4a','#3a6b1a'];
@@ -465,28 +1233,75 @@ function renderErgebnis(data) {
   charts.einzel = new Chart(document.getElementById('chart-einzel'), {
     type:'line',
     data:{ labels, datasets: einzel_ds },
-    options: mkOpts()
+    options: mkOpts(currency)
   });
 }
 
-function mkOpts() {
+function mkOpts(currency='EUR') {
   return {
     responsive:true, maintainAspectRatio:false,
     plugins:{
       legend:{ labels:{ color:'#666', font:{family:'IBM Plex Mono',size:10}, boxWidth:16 }},
-      tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString('de-DE')}€` }}
+      tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${money(ctx.parsed.y, currency)}` }}
     },
     scales:{
-      y:{ ticks:{ callback: v => v>=1000000?(v/1000000).toFixed(1)+'M€':(v/1000).toFixed(0)+'k€', color:'#999', font:{family:'IBM Plex Mono',size:10}}, grid:{color:'rgba(0,0,0,0.05)'}},
+      y:{ ticks:{ callback: v => v>=1000000?(v/1000000).toFixed(1)+'M '+currency:(v/1000).toFixed(0)+'k '+currency, color:'#999', font:{family:'IBM Plex Mono',size:10}}, grid:{color:'rgba(0,0,0,0.05)'}},
+      x:{ ticks:{ color:'#999', font:{family:'IBM Plex Mono',size:10}, maxTicksLimit:10, maxRotation:0}, grid:{display:false}}
+    }
+  };
+}
+
+function mkPercentOpts() {
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{ labels:{ color:'#666', font:{family:'IBM Plex Mono',size:10}, boxWidth:16 }},
+      tooltip:{ callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y || 0).toFixed(2)}%` }}
+    },
+    scales:{
+      y:{ ticks:{ callback: v => `${Number(v).toFixed(0)}%`, color:'#999', font:{family:'IBM Plex Mono',size:10}}, grid:{color:'rgba(0,0,0,0.05)'}},
       x:{ ticks:{ color:'#999', font:{family:'IBM Plex Mono',size:10}, maxTicksLimit:10, maxRotation:0}, grid:{display:false}}
     }
   };
 }
 
 function fmt(n) { return Math.round(n).toLocaleString('de-DE'); }
-function showError(msg) { document.getElementById('main').innerHTML = `<div class="error-box">⚠ ${msg}</div>`; }
+function money(n, currency='EUR') { return `${fmt(n)} ${currency}`; }
+function showError(msg) {
+  destroyCharts();
+  document.getElementById('main').innerHTML = `<div class="error-box">Warnung: ${escapeHtml(msg)}</div>`;
+}
 
+function loadDashboardPortfolio() {
+  const raw = localStorage.getItem('dashboardPortfolio');
+  if (!raw) return;
+  try {
+    const portfolio = JSON.parse(raw);
+    assets = (portfolio.assets || []).map(a => ({
+      name: a.name || a.symbol,
+      symbol: a.symbol,
+      anteil: Number(a.anteil),
+      waehrung: a.waehrung || 'AUTO',
+      steuer_typ: a.steuer_typ || 'aktie',
+      regeln: a.regeln || {},
+    }));
+    if (portfolio.name) document.getElementById('backtest-name').value = portfolio.name;
+    if (portfolio.startkapital) document.getElementById('startkapital').value = portfolio.startkapital;
+    if (portfolio.basiswaehrung) document.getElementById('basiswaehrung').value = portfolio.basiswaehrung;
+  } catch(e) {
+    console.warn('Portfolio konnte nicht geladen werden', e);
+  } finally {
+    localStorage.removeItem('dashboardPortfolio');
+  }
+}
+
+document.getElementById('new-currency').innerHTML = currencyOptions('AUTO');
+document.getElementById('new-tax-type').innerHTML = taxTypeOptions('aktie');
+initSidebarResize();
+updateDerivedTaxRate();
+loadDashboardPortfolio();
 renderAssets();
+updateCompareStatus();
 </script>
 </body>
 </html>

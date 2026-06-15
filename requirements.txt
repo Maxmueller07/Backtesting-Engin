@@ -13,3 +13,4 @@ tavily-python
 python-dotenv
 quantstats
 matplotlib
+psycopg[binary]

@@ -1,11 +1,12 @@
 import bcrypt
 import jwt
 import os
+import secrets
 from datetime import datetime, timedelta
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dein-geheimer-schluessel-hier-aendern")
+SECRET_KEY = os.getenv("SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
