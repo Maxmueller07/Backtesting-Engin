@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -28,6 +29,12 @@ class DeploymentFilesTest(unittest.TestCase):
 
         self.assertIn("backtesting.db", gitignore)
         self.assertIn("*.sqlite3", gitignore)
+
+    def test_secret_scan_pattern_does_not_flag_risk_off_text(self):
+        openai_pattern = re.compile(r"(?<![A-Za-z0-9_])" + "sk" + r"-(?:proj-)?[A-Za-z0-9_-]{20,}")
+
+        self.assertIsNone(openai_pattern.search("Risk-Off-Marktrotation"))
+        self.assertIsNotNone(openai_pattern.search("sk-" + "a" * 30))
 
 
 if __name__ == "__main__":

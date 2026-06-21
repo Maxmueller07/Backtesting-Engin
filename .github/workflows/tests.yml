@@ -37,10 +37,10 @@ jobs:
           import sys
 
           patterns = {
-              "github_pat": re.compile("github_" + "pat_"),
-              "github_classic": re.compile("gh" + "p_"),
-              "tavily": re.compile("tv" + "ly-"),
-              "openai": re.compile("sk" + "-[A-Za-z0-9]"),
+              "github_pat": re.compile("github_" + "pat_[A-Za-z0-9_]{20,}"),
+              "github_classic": re.compile("gh" + "p_[A-Za-z0-9_]{20,}"),
+              "tavily": re.compile("tv" + "ly-[A-Za-z0-9_-]{20,}"),
+              "openai": re.compile(r"(?<![A-Za-z0-9_])" + "sk" + r"-(?:proj-)?[A-Za-z0-9_-]{20,}"),
           }
           files = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
           hits = []
