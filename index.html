@@ -84,6 +84,25 @@ header {
 .agent-result h4 { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--black); margin: 0.7rem 0 0.3rem; }
 .agent-result ul { margin-left: 1rem; }
 .agent-muted { font-family: var(--mono); font-size: 0.66rem; color: var(--gray4); }
+.rule-builder-text {
+  width: 100%; min-height: 86px; resize: vertical; border: 1px solid var(--border); border-radius: 3px;
+  padding: 0.65rem; font-family: var(--mono); font-size: 0.68rem; line-height: 1.45; color: var(--gray2);
+  background: var(--white); outline: none;
+}
+.rule-builder-text:focus { border-color: var(--black); }
+.rule-preview {
+  white-space: pre-wrap; word-break: break-word; border: 1px solid var(--border); background: var(--gray7);
+  padding: 0.7rem; font-family: var(--mono); font-size: 0.62rem; line-height: 1.45; max-height: 240px; overflow: auto;
+}
+.rule-status { font-family: var(--mono); font-size: 0.65rem; color: var(--gray3); line-height: 1.4; margin: 0.65rem 0; }
+.rule-status.err { color: var(--red); }
+.rule-status.ok { color: var(--green); }
+.rule-status.warn { color: var(--gold); }
+.rule-list { display: grid; gap: 0.45rem; margin-top: 0.65rem; }
+.rule-pill { border: 1px solid var(--border); padding: 0.55rem; display: grid; grid-template-columns: 1fr auto; gap: 0.6rem; align-items: center; }
+.rule-pill-title { font-size: 0.72rem; color: var(--gray2); }
+.rule-pill-sub { font-family: var(--mono); font-size: 0.6rem; color: var(--gray4); margin-top: 0.18rem; }
+.rule-remove { border: 1px solid var(--border); background: var(--white); width: 28px; height: 28px; cursor: pointer; }
 
 .layout {
   display: grid;
@@ -395,6 +414,33 @@ input:focus, select:focus { border-color: var(--black); }
     </div>
   </div>
 
+  <!-- 04 AI Rule Builder -->
+  <div class="accordion-item">
+    <button class="accordion-header" onclick="toggleAcc(this)">
+      <span>04 - AI Rule Builder</span><span class="accordion-arrow">v</span>
+    </button>
+    <div class="accordion-body">
+      <div class="field">
+        <label>Regelbeschreibung</label>
+        <textarea class="rule-builder-text" id="rule-builder-text" placeholder="Buy gold when the market rotation score is above 70. Use 20% of my Apple position."></textarea>
+      </div>
+      <div class="field">
+        <label>Neue Assets</label>
+        <select id="rule-new-asset-mode">
+          <option value="ask" selected>Nachfragen</option>
+          <option value="soft_approve">Soft approve</option>
+          <option value="portfolio_only">Nur Portfolio</option>
+        </select>
+      </div>
+      <button class="run-btn" style="padding:0.55rem;font-size:0.68rem;" onclick="buildAiRule()">Regel bauen</button>
+      <button class="run-btn" style="padding:0.5rem;font-size:0.64rem;margin-top:0.4rem;background:var(--gray2);" onclick="clearCustomRules()">Custom-Regeln leeren</button>
+      <div class="rule-status" id="rule-builder-status">Keine Custom Rule aktiv.</div>
+      <pre class="rule-preview" id="rule-preview" style="display:none;"></pre>
+      <button class="run-btn" id="rule-add-btn" style="display:none;padding:0.55rem;font-size:0.68rem;margin-top:0.5rem;background:var(--green);" onclick="addPendingCustomRule()">Zum Backtest hinzufuegen</button>
+      <div class="rule-list" id="custom-rule-list"></div>
+    </div>
+  </div>
+
   <div class="accordion-item" id="acc-stoploss" style="display:none;">
     <button class="accordion-header open" onclick="toggleAcc(this)">
       <span>04 â€” Stop Loss Konfiguration</span><span class="accordion-arrow">â–¾</span>
@@ -550,6 +596,10 @@ const API = window.location.origin.startsWith('http') ? window.location.origin :
 let charts = {};
 let activeAgentAsset = null;
 let agentCloseTimer = null;
+let pendingCustomRule = null;
+let pendingCustomRules = [];
+let pendingNewAssets = [];
+let customRegeln = [];
 const SIDEBAR_WIDTH_KEY = 'backtestSidebarWidth';
 const SIDEBAR_DEFAULT_WIDTH = 380;
 const SIDEBAR_MIN_WIDTH = 300;
@@ -935,8 +985,174 @@ function getRegeln() {
     .filter(r => document.getElementById(`sw-${r}`)?.classList.contains('on'));
 }
 
+function portfolioSymbols() {
+  return assets
+    .map(a => (a.symbol || '').trim().toUpperCase())
+    .filter(Boolean);
+}
+
+async function buildAiRule() {
+  const status = document.getElementById('rule-builder-status');
+  const preview = document.getElementById('rule-preview');
+  const addBtn = document.getElementById('rule-add-btn');
+  pendingCustomRule = null;
+  pendingCustomRules = [];
+  pendingNewAssets = [];
+  addBtn.style.display = 'none';
+  preview.style.display = 'none';
+  status.className = 'rule-status';
+  status.textContent = 'Regel wird gebaut.';
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Bitte einloggen, um den Rule Builder zu nutzen.');
+    const symbols = portfolioSymbols();
+    const newAssetMode = document.getElementById('rule-new-asset-mode').value || 'ask';
+    const body = {
+      natural_language_rule: document.getElementById('rule-builder-text').value.trim(),
+      portfolio_symbols: symbols,
+      base_currency: document.getElementById('basiswaehrung').value,
+      risk_level: 'safe',
+      new_asset_mode: newAssetMode
+    };
+    const res = await fetch(`${API}/rules/build`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `API Fehler ${res.status}`);
+    if (data.status === 'needs_manual_review') {
+      status.className = 'rule-status warn';
+      status.textContent = `Der Indikator '${data.missing_indicator || 'unbekannt'}' konnte nicht sicher automatisch ergaenzt werden. Grund: ${data.reason || data.message || 'manuelle Pruefung erforderlich.'}`;
+      preview.textContent = JSON.stringify({
+        status: data.status,
+        missing_indicator: data.missing_indicator,
+        reason: data.reason,
+        auto_extension_trace: data.auto_extension_trace || {},
+        capability_gap: data.capability_gap || {}
+      }, null, 2);
+      preview.style.display = 'block';
+      return;
+    }
+    if (data.status !== 'ok') throw new Error(data.message || data.code || 'Regel konnte nicht gebaut werden.');
+    pendingCustomRules = Array.isArray(data.rules) ? data.rules : [data.rule];
+    pendingCustomRule = pendingCustomRules[0];
+    pendingNewAssets = Array.isArray(data.new_assets) ? data.new_assets : [];
+    status.className = 'rule-status ok';
+    const assetNote = pendingNewAssets.length
+      ? ` Neue Assets: ${pendingNewAssets.map(a => a.symbol).join(', ')}.`
+      : '';
+    const extensionNote = Array.isArray(data.auto_extensions) && data.auto_extensions.length
+      ? ` Der fehlende Indikator '${data.auto_extensions[0].name}' wurde automatisch als sicherer Formel-Indikator erstellt, getestet und verwendet.`
+      : '';
+    status.textContent = `${data.explanation || 'Regel validiert.'}${extensionNote}${assetNote}`;
+    preview.textContent = JSON.stringify({
+      rule: data.rule,
+      rules: pendingCustomRules,
+      rule_count: pendingCustomRules.length,
+      new_assets: pendingNewAssets,
+      requires_asset_approval: Boolean(data.requires_asset_approval),
+      auto_extensions: data.auto_extensions || [],
+      auto_extension_trace: data.auto_extension_trace || {},
+      warnings: data.warnings || [],
+      example_tests: data.example_tests || []
+    }, null, 2);
+    preview.style.display = 'block';
+    addBtn.textContent = data.requires_asset_approval ? 'Assets + Regel bestaetigen' : 'Zum Backtest hinzufuegen';
+    addBtn.style.display = 'block';
+  } catch (err) {
+    status.className = 'rule-status err';
+    status.textContent = err.message;
+  }
+}
+
+function addPendingCustomRule() {
+  if (!pendingCustomRules.length) return;
+  addResolvedRuleAssets(pendingNewAssets);
+  pendingCustomRules.forEach(rule => customRegeln.push(cloneData(rule)));
+  pendingCustomRule = null;
+  pendingCustomRules = [];
+  pendingNewAssets = [];
+  document.getElementById('rule-add-btn').style.display = 'none';
+  document.getElementById('rule-preview').style.display = 'none';
+  renderCustomRules();
+}
+
+function addResolvedRuleAssets(newAssets) {
+  const existing = new Set(portfolioSymbols());
+  (newAssets || []).forEach(item => {
+    const symbol = String(item.symbol || '').trim().toUpperCase();
+    if (!symbol || existing.has(symbol)) return;
+    assets.push({
+      name: item.name || symbol,
+      symbol,
+      anteil: Number(item.anteil) || 0,
+      waehrung: item.waehrung || 'AUTO',
+      steuer_typ: item.steuer_typ || 'aktie',
+      regeln: {}
+    });
+    existing.add(symbol);
+  });
+  if ((newAssets || []).length) renderAssets();
+}
+
+function removeCustomRule(index) {
+  customRegeln.splice(index, 1);
+  renderCustomRules();
+}
+
+function clearCustomRules() {
+  customRegeln = [];
+  pendingCustomRule = null;
+  pendingCustomRules = [];
+  pendingNewAssets = [];
+  document.getElementById('rule-preview').style.display = 'none';
+  document.getElementById('rule-add-btn').style.display = 'none';
+  renderCustomRules();
+}
+
+function renderCustomRules() {
+  const list = document.getElementById('custom-rule-list');
+  const status = document.getElementById('rule-builder-status');
+  if (!customRegeln.length) {
+    list.innerHTML = '';
+    status.textContent = 'Keine Custom Rule aktiv.';
+    status.className = 'rule-status';
+    return;
+  }
+  status.textContent = `${customRegeln.length} Custom Rule(s) aktiv.`;
+  status.className = 'rule-status ok';
+  list.innerHTML = customRegeln.map((rule, index) => `
+    <div class="rule-pill">
+      <div>
+        <div class="rule-pill-title">${escapeHtml(rule.name || rule.id)}</div>
+        <div class="rule-pill-sub">${escapeHtml(rule.condition?.indicator || '')} ${escapeHtml(rule.condition?.operator || '')} ${escapeHtml(rule.condition?.value ?? '')}</div>
+      </div>
+      <button class="rule-remove" title="Entfernen" onclick="removeCustomRule(${index})">x</button>
+    </div>
+  `).join('');
+}
+
 function cloneData(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function apiErrorMessage(status, data={}) {
+  const detail = data.detail ?? data.message;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(item => item.msg || item.message || JSON.stringify(item)).join('; ');
+  }
+  if (detail && typeof detail === 'object') {
+    const parts = [];
+    if (detail.message) parts.push(detail.message);
+    if (Array.isArray(detail.errors)) {
+      parts.push(...detail.errors.map(error => error.message || error.msg || JSON.stringify(error)));
+    }
+    if (parts.length) return parts.join(': ');
+    return JSON.stringify(detail);
+  }
+  return `API Fehler ${status}`;
 }
 
 function validatePortfolioWeights() {
@@ -996,7 +1212,8 @@ function buildSimulationConfig() {
       kirchensteuer: parseFloat(document.getElementById('tax-church').value),
       tax_loss_harvesting: checked('tax-loss-harvesting'),
       harvesting_schwelle_prozent: parseFloat(document.getElementById('tax-harvest-threshold').value),
-    }
+    },
+    custom_regeln: cloneData(customRegeln)
   };
 }
 
@@ -1015,7 +1232,11 @@ async function postSimulationConfig(config) {
       body: JSON.stringify(config)
     });
   }
-  if (!res.ok) throw new Error(`API Fehler ${res.status}`);
+  if (!res.ok) {
+    let errorData = {};
+    try { errorData = await res.json(); } catch(e) {}
+    throw new Error(apiErrorMessage(res.status, errorData));
+  }
   const data = await res.json();
   if (data.fehler) throw new Error(data.fehler);
   return data;

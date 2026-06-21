@@ -10,10 +10,12 @@ from pydantic import BaseModel, Field
 from typing import Optional
 import math
 
+from ai_rule_builder import example_tests_for_rule, validate_rule_payload
 from agent_graph import run_agent_analysis
 from dashboard import build_portfolio_dashboard
 from main import simuliere
 from Protfolio import Portfolio
+from rule_agent_graph import run_rule_builder_agent
 from auth import hash_password, verify_password, create_token, get_current_user
 from database import init_db, create_user, get_user_by_username, save_portfolio, get_portfolios, delete_portfolio, \
     save_result, get_results
@@ -119,6 +121,7 @@ class SimulationsConfig(BaseModel):
     stop_loss_config: StopLossConfig = Field(default_factory=StopLossConfig)
     transaktionskosten_config: TransaktionskostenConfig = Field(default_factory=TransaktionskostenConfig)
     steuer_config: SteuerConfig = Field(default_factory=SteuerConfig)
+    custom_regeln: list[dict] = Field(default_factory=list)
     name: Optional[str] = None
     speichern: bool = False
 
@@ -149,6 +152,23 @@ class AgentAnalysisRequest(BaseModel):
     name: Optional[str] = Field(default=None, max_length=120)
     template: AgentTemplateConfig = Field(default_factory=AgentTemplateConfig)
     instructions: AgentInstructionConfig = Field(default_factory=AgentInstructionConfig)
+
+
+class RuleBuildRequest(BaseModel):
+    natural_language_rule: str = Field(min_length=5, max_length=5000)
+    portfolio_symbols: list[str] = Field(default_factory=list, max_length=40)
+    base_currency: str = "EUR"
+    risk_level: str = "safe"
+    new_asset_mode: str = Field(default="portfolio_only", max_length=20)
+
+
+class RuleValidateRequest(BaseModel):
+    rule: dict
+    portfolio_symbols: list[str] = Field(default_factory=list, max_length=40)
+
+
+class RuleExampleTestsRequest(BaseModel):
+    rule: dict
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -184,6 +204,33 @@ def agent_analyze(data: AgentAnalysisRequest, current_user: dict = Depends(get_c
         raise HTTPException(status_code=502, detail=f"KI-Agent konnte die Aktie nicht analysieren: {exc}")
 
 
+@app.post("/rules/build")
+def rules_build(data: RuleBuildRequest, current_user: dict = Depends(get_current_user)):
+    _rate_limit_agent(current_user)
+    symbols = _validate_symbol_list(data.portfolio_symbols)
+    return run_rule_builder_agent(
+        natural_language_rule=data.natural_language_rule,
+        portfolio_symbols=symbols,
+        base_currency=data.base_currency,
+        risk_level=data.risk_level,
+        new_asset_mode=data.new_asset_mode,
+    )
+
+
+@app.post("/rules/validate")
+def rules_validate(data: RuleValidateRequest, current_user: dict = Depends(get_current_user)):
+    symbols = _validate_symbol_list(data.portfolio_symbols)
+    return validate_rule_payload(data.rule, symbols)
+
+
+@app.post("/rules/example-tests")
+def rules_example_tests(data: RuleExampleTestsRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        return example_tests_for_rule(data.rule)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Regeltests konnten nicht erzeugt werden: {exc}")
+
+
 def _rate_limit_agent(current_user: dict):
     key = str(current_user.get("user_id") or current_user.get("username") or "unknown")
     _rate_limit_bucket(
@@ -212,6 +259,16 @@ def _rate_limit_bucket(bucket, key: str, limit: int, detail: str):
     if len(calls) >= limit:
         raise HTTPException(status_code=429, detail=detail)
     calls.append(now)
+
+
+def _validate_symbol_list(symbols: list[str]) -> list[str]:
+    normalized = []
+    for symbol in symbols:
+        value = str(symbol).upper().strip()
+        if not SYMBOL_PATTERN.match(value):
+            raise HTTPException(status_code=400, detail=f"Ungueltiges Symbol: {symbol}")
+        normalized.append(value)
+    return normalized
 
 
 def _model_to_dict(model):
@@ -250,6 +307,13 @@ def _simuliere_config(config: SimulationsConfig):
     if not portfolio.check_antiel():
         raise HTTPException(status_code=400, detail="Anteile ergeben nicht 100%")
 
+    if config.custom_regeln:
+        symbols = [asset.symbol.upper().strip() for asset in config.assets]
+        for rule in config.custom_regeln:
+            validation = validate_rule_payload(rule, symbols)
+            if not validation["valid"]:
+                raise HTTPException(status_code=400, detail={"message": "Custom Rule ungueltig", "errors": validation["errors"]})
+
     try:
         ergebnis = simuliere(
             portfolio=portfolio,
@@ -265,6 +329,7 @@ def _simuliere_config(config: SimulationsConfig):
             basiswaehrung=config.basiswaehrung,
             transaktionskosten_config=_model_to_dict(config.transaktionskosten_config),
             steuer_config=_model_to_dict(config.steuer_config),
+            custom_regeln=config.custom_regeln,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Simulation fehlgeschlagen: {exc}")

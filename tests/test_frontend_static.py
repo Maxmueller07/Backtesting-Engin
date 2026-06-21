@@ -10,6 +10,9 @@ class FrontendStaticTest(unittest.TestCase):
         self.assertIn("'/simuliere/public'", html)
         self.assertIn("res.status === 401", html)
         self.assertIn("localStorage.removeItem('token')", html)
+        self.assertIn("function apiErrorMessage", html)
+        self.assertIn("await res.json()", html)
+        self.assertIn("throw new Error(apiErrorMessage(res.status, errorData))", html)
 
     def test_risk_and_savings_controls_are_present(self):
         html = Path("index.html").read_text(encoding="utf-8")
@@ -102,6 +105,26 @@ class FrontendStaticTest(unittest.TestCase):
         self.assertIn("chart-compare-return", html)
         self.assertIn("config.name || 'Backtest'", html)
         self.assertIn("slotNameInput?.value.trim()", html)
+
+    def test_ai_rule_builder_frontend_is_wired(self):
+        html = Path("index.html").read_text(encoding="utf-8")
+
+        self.assertIn("AI Rule Builder", html)
+        self.assertIn("id=\"rule-builder-text\"", html)
+        self.assertIn("function buildAiRule()", html)
+        self.assertIn("/rules/build", html)
+        self.assertIn("Authorization:`Bearer ${token}`", html)
+        self.assertIn("custom_regeln: cloneData(customRegeln)", html)
+        self.assertIn("function addPendingCustomRule()", html)
+        self.assertIn("function renderCustomRules()", html)
+        self.assertIn(".map(a => (a.symbol || '').trim().toUpperCase())", html)
+        self.assertIn("id=\"rule-new-asset-mode\"", html)
+        self.assertIn("new_asset_mode: newAssetMode", html)
+        self.assertIn("pendingNewAssets", html)
+        self.assertIn("pendingCustomRules", html)
+        self.assertIn("rule_count: pendingCustomRules.length", html)
+        self.assertIn("function addResolvedRuleAssets", html)
+        self.assertIn("requires_asset_approval", html)
 
 
 if __name__ == "__main__":

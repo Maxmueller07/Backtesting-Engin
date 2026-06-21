@@ -4,6 +4,7 @@ matplotlib.use("Agg")
 import numpy as np
 import pandas as pd
 
+from custom_rule_engine import execute_custom_rules
 from Protfolio import Portfolio
 from Parrameter import Parameter
 from market_data import DEFAULT_BASE_CURRENCY, download_symbol_history, normalize_currency
@@ -70,6 +71,8 @@ def regel_manager(
     intervall,
     schwellwert_config=None,
     stop_loss_config=None,
+    custom_regeln=None,
+    historische_kurse=None,
     ledger=None,
 ):
     aktive_regeln = set(aktive_regeln)
@@ -117,6 +120,17 @@ def regel_manager(
             Parameter.rebalancing(portfolio, aktuelle_kurse=reihe, state=state, ledger=ledger, datum=datum)
             runtime_state["last_rebalance_date"] = datum
 
+    if custom_regeln:
+        execute_custom_rules(
+            portfolio=portfolio,
+            current_prices=reihe,
+            historical_prices=historische_kurse,
+            current_date=datum,
+            custom_rules=custom_regeln,
+            ledger=ledger,
+            runtime_state=runtime_state,
+        )
+
 
 def simuliere(
     portfolio: Portfolio,
@@ -132,6 +146,7 @@ def simuliere(
     basiswaehrung: str = DEFAULT_BASE_CURRENCY,
     transaktionskosten_config: dict | None = None,
     steuer_config: dict | None = None,
+    custom_regeln: list | None = None,
 ):
     if intervall <= 0:
         raise ValueError("Rebalancing-Intervall muss groesser als 0 sein")
@@ -210,6 +225,8 @@ def simuliere(
                 intervall,
                 schwellwert_config,
                 stop_loss_config,
+                custom_regeln,
+                preise_df.loc[:datum],
                 ledger,
             )
         except Exception as exc:
@@ -267,6 +284,7 @@ def simuliere(
         "basiswaehrung": basiswaehrung,
         "waehrungen": currency_meta,
         "steuer_report": ledger.summary(),
+        "custom_rule_events": runtime_state.get("custom_rule_events", []),
     }
 
 
